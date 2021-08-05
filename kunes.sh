@@ -6,9 +6,12 @@ firefox --new-window https://www.wolframcloud.com/ &
 
 code -r ../Projectarbeit_Kunes
 
-code -r System_Dynamics.ipynb
+jupyter lab ../Projectarbeit_Kunes &
 
-soffice --calc Concepts_Slides/concepts_1.pptx &
+#code -r Dynamical_Systems.ipynb
+
+#soffice --calc Concepts_Slides/concepts_1.pptx &
+evince Concepts_Slides/concepts_1.pdf &
 
 evince Programms_Mathematica/CCMP_math.pdf &
 
