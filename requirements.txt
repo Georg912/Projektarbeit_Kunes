@@ -1,0 +1,6 @@
+jupyter
+jupyterlab
+matplotlib
+numpy
+scipy
+seaborn
