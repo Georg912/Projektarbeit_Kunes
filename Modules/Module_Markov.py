@@ -7,28 +7,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt # Plotting
 from cycler import cycler #used for color cycles in mpl
 
-###########################################################################################################
-def check_if_int(string):
-    """
-    Convert decimal value of `string` as integer/float/complep1 datatype without additional zeros after comma (e.g. "3.0" => 3).
-
-    Parameters:
-    -----------
-    string : str
-
-    Returns:
-    --------
-    value
-    """
-    value = complex(string)
-    if np.isreal(value):
-        value = value.real
-        if value.is_integer():
-            return int(value)
-        else:
-            return value
-    return value
-
 
 ###########################################################################################################
 def Hopping_Matrix(n = 6):

@@ -3,7 +3,7 @@ import ipywidgets as widgets
 import time # used for `sleep`
 from ipywidgets import Layout
 import numpy as np
-from Module_Markov import check_if_int
+from Module_Utilities import check_if_int
 
 ###########################################################################################################
 Iterations_Slider = widgets.IntSlider(
@@ -346,6 +346,11 @@ axis_Slider = widgets.IntSlider(
             continuous_update=False
             )
 
-
+def change_min_turns(turns):
+    turns_Slider.min = -turns_Slider.max
+    return turns_Slider.min
+    
 widgets.dlink((n_Slider, 'value'), (axis_Slider, 'max'));
 widgets.dlink((n_Slider, 'value'), (axis2_Slider, 'max'));
+widgets.dlink((n_Slider, 'value'), (turns_Slider, 'max'));
+widgets.dlink((turns_Slider, 'max'), (turns_Slider, 'min'), change_min_turns);

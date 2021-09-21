@@ -346,6 +346,11 @@ axis_Slider = widgets.IntSlider(
             continuous_update=False
             )
 
-
+def change_min_turns(turns):
+    turns_Slider.min = -turns_Slider.max
+    return turns_Slider.min
+    
 widgets.dlink((n_Slider, 'value'), (axis_Slider, 'max'));
 widgets.dlink((n_Slider, 'value'), (axis2_Slider, 'max'));
+widgets.dlink((n_Slider, 'value'), (turns_Slider, 'max'));
+widgets.dlink((turns_Slider, 'max'), (turns_Slider, 'min'), change_min_turns);

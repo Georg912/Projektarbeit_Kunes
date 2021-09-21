@@ -3,16 +3,17 @@
 
 import numpy as np
 from scipy.sparse import diags # Used for banded matrices
-
+from Module_Utilities import rename
 
 
 ###########################################################################################################
 #TODO: possibly implement triu or tril for hamilton matrix
+@rename("H")
 def Hopping_Matrix_with_Phase(n = 6, phase=None, **kwargs):
     """
     TODO: write documentation
     """
-
+    
     ### Check if system is large enough, i.e. if n=>2
     assert n >= 2, "error n must be greater or equal to 2"
 
@@ -41,7 +42,8 @@ def Show_Hamiltonian_Gaugefreedom(**kwargs):
     print(f"Eigenvalues of H: {np.round(eigvals, precision+1)}")
     
 
-    ###########################################################################################################
+###########################################################################################################
+@rename("M")    
 def Magnetic_Flux_Matrix(n = 6, **kwargs):
     """
     TODO: write documentation
@@ -76,6 +78,7 @@ def Show_Magnetic_Flux(**kwargs):
 
 
 ###########################################################################################################
+@rename("T")
 def Right_Translation_Matrix(n=6, turns=1, show=False, **kwargs):
     """
     TODO: write documentation
@@ -128,6 +131,7 @@ def Show_Commutator(A, B, name_A, name_B, **kwargs):
     
 
 ###########################################################################################################
+@rename("R")
 def Reflection_Matrix(n=6, axis=1, show=False, **kwargs):
     """
     TODO: write documentation
