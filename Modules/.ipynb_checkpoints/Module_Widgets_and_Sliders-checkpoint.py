@@ -3,7 +3,7 @@ import ipywidgets as widgets
 import time # used for `sleep`
 from ipywidgets import Layout
 import numpy as np
-from Module_Markov import check_if_int
+from Module_Utilities import check_if_int
 
 ###########################################################################################################
 Iterations_Slider = widgets.IntSlider(
@@ -55,20 +55,10 @@ states_dict = {
     10:[[1,0,0,0,0,0,0,0,0,0], [0,1,0,0,0,0,0,0,0,0], [0,0,1,0,0,0,0,0,0,0], [0.5,0.3,0.2,0,0,0,0,0,0,0]]
     }
 
+from itertools import permutations
+states_dict = dict(zip(np.arange(2,11), [list(map(list, sorted(set(permutations(list(np.pad([1], (0,n-1), constant_values=0)))))))[::-1] for n in np.arange(2,11)]))
+
 #TODO: rename blub
-###########################################################################################################
-Initial_State = widgets.Dropdown(
-    equals=np.array_equal, #otherwise "value" checks element wise
-    options=[([1,0,0,0,0,0]),
-        ('2', [0,1,0,0,0,0]),
-        ("3", [0,0,1,0,0,0]),
-        ("mix", [0.5,0.2,0.3,0,0,0])
-        ],
-    value=[1,0,0,0,0,0],#np.array([1,0,0,0,0,0]),
-    description='Initial State:',
-    style = {'description_width': 'initial'},
-    continuous_update=False,
-)
 
 
 ###########################################################################################################
@@ -82,6 +72,17 @@ n_Slider = widgets.BoundedIntText(
             style = {'description_width': 'initial'},
             continuous_update=False
             )
+
+
+###########################################################################################################
+Initial_State = widgets.Dropdown(
+    equals=np.array_equal, #otherwise "value" checks element wise
+    options=states_dict[n_Slider.value],
+    value=states_dict[n_Slider.value][0],#np.array([1,0,0,0,0,0]),
+    description='Initial State:',
+    style = {'description_width': 'initial'},
+    continuous_update=False,
+)
 
 #TODO: change to be more descriptive
 ###########################################################################################################

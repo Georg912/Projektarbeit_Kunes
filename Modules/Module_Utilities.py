@@ -134,6 +134,8 @@ def Eig(M):
         column ``v[:,i]`` is the eigenvector corresponding to the
         eigenvalue ``w[i]``.
 
+    References
+    ----------
     Documentation taken from "https://github.com/numpy/numpy/blob/v1.21.0/numpy/linalg/linalg.py#L1187-L1333"
     """
     if is_hermitian(M):
