@@ -7,6 +7,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt # Plotting
 from cycler import cycler #used for color cycles in mpl
 
+#possible TODOS:
+    # add p2 to the title of the plots
 
 ###########################################################################################################
 def Hopping_Matrix(n=6):
@@ -158,7 +160,7 @@ def Calc_Markov(state=[1,0,0,0,0,0], n_its=400, **kwargs):
 
     ### check if `n_its` is a positive integer
     assert n_its >= 0, "n_its must be greater or equal to 0."
-    assert type(n_its) == int, f"n_its must be an integer not {type(n)}"
+    assert type(n_its) == int, f"n_its must be an integer not {type(_n)}"
 
     T = Transfer_Matrix(**kwargs)
     state = np.array(state)
@@ -205,7 +207,7 @@ def Plot_Markov(state=[1,0,0,0,0,0], n_its=400, **kwargs):
     fig = plt.figure(figsize=(10,6))
 
     ### make plot pretty
-    plt.title(f"Markov evolution of the $n={_n}$-ring with initial state {state} and $p_1 = {kwargs.get('p1', 0.1)}$")
+    plt.title(f"Markov evolution of the $n={_n}$-ring with initial state {state} and $p_1 = {kwargs.get('p1', 0.1)}$", wrap=True)
     plt.xlabel(r"Number of iterations $n_{\mathrm{its}}$")
     plt.ylabel(r"Probability of finding particle at site $i$")
     plt.grid()
@@ -217,7 +219,10 @@ def Plot_Markov(state=[1,0,0,0,0,0], n_its=400, **kwargs):
     ### actual plotting
     for i, site in enumerate(np.arange(_n)[::-1]):
         plt.plot(observations[:, site], ".-", label=f"Site {site+1}", color=colors[i])
-    legend = plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+    
+    ax = plt.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    plt.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc="upper left")
 
     plt.show()
     return fig
@@ -303,7 +308,7 @@ def Plot_Markov_Path(initial_position=1, p1=0.1, n_its=400, **kwargs):
     observations = Calc_Markov_Path(initial_position=initial_position, n_its=n_its, p1=p1, **kwargs)
     n = kwargs.get("n", 6)
     
-    fig = plt.figure(figsize=(10,6))
+    fig = plt.figure(figsize=(12,6))
     
     plt.title(f"Markov evolution of the $n={n}$-ring, particle initialy at position {initial_position} using explicit paths, $p_1 = {p1}$")
     plt.xlabel(r"Number of iterations $n_{\mathrm{its}}$")
@@ -314,7 +319,10 @@ def Plot_Markov_Path(initial_position=1, p1=0.1, n_its=400, **kwargs):
 
     for site in np.arange(n)[::-1]:
         plt.plot(observations[:, site], ".-", label=f"Site {site+1}")
-    legend = plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+    ax = plt.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    plt.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc="upper left")
+    plt.tight_layout()
     
     plt.show()
     return fig

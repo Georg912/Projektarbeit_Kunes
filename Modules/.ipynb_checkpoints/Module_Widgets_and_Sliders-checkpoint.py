@@ -3,6 +3,7 @@ import ipywidgets as widgets
 import time # used for `sleep`
 from ipywidgets import Layout
 import numpy as np
+from IPython.display import clear_output
 from Module_Utilities import check_if_int
 
 ###########################################################################################################
@@ -96,7 +97,7 @@ Text_Box = widgets.Text(continuous_update=False,
 
 Save_Figure_Button = widgets.Button(
         layout=Layout(width = "5cm"),
-        description="Click to save current figure",
+        description="Save Current Figure",
         style = {'description_width': 'initial'}
         )
 
@@ -355,3 +356,80 @@ widgets.dlink((n_Slider, 'value'), (axis_Slider, 'max'));
 widgets.dlink((n_Slider, 'value'), (axis2_Slider, 'max'));
 widgets.dlink((n_Slider, 'value'), (turns_Slider, 'max'));
 widgets.dlink((turns_Slider, 'max'), (turns_Slider, 'min'), change_min_turns);
+
+
+#################################################################################
+# Widgets for Arbitrary Hopping
+button_to_add = widgets.Button(
+                    layout=Layout(width = "5cm"),
+                    description="Add hopping",
+                    style = {'description_width': 'initial'}
+                    )
+
+
+button_to_undo = widgets.Button(
+                    layout=Layout(width = "5cm"),
+                    description="Undo last hopping",
+                    style = {'description_width': 'initial'}
+                    )
+
+button_to_reset = widgets.Button(
+                    layout=Layout(width = "5cm"),
+                    description="Reset H and T",
+                    style = {'description_width': 'initial'}
+                    )
+
+button_to_show = widgets.Button(
+                    layout=Layout(width = "5cm"),
+                    description="Show current H and T",
+                    style = {'description_width': 'initial'}
+                    )
+
+i_IntText = widgets.BoundedIntText(
+                min=1,
+                max=n_Slider.value,
+                step=1,
+                value=0,
+                layout=Layout(width = "10cm"),# height="80px"),#"auto"),
+                description=r"Hopping from site $i$ = ",
+                style = {'description_width': 'initial'},
+                continuous_update=False
+                )
+
+
+j_IntText = widgets.BoundedIntText(
+                min=1,
+                max=n_Slider.value,
+                step=1,
+                value=2,
+                layout=Layout(width = "10cm"),# height="80px"),#"auto"),
+                description=r'To site $j$ =',
+                style = {'description_width': 'initial'},
+                continuous_update=False
+                )
+
+p_BoundedFloatText = widgets.BoundedFloatText(
+                min=0,
+                max=1.,
+                step=0.01,
+                value=0.1,
+                style = {'description_width': 'initial'},
+                layout=Layout(width = "10cm"),# height="80px"),#"auto"),
+                description=r"With ${p_{ij}}$ = ",
+                continuous_update=False
+                )
+
+widgets.dlink((n_Slider, "value"), (i_IntText, "max"))
+widgets.dlink((n_Slider, "value"), (j_IntText, "max"))
+    
+checkbox = widgets.Checkbox(value=False, description= "Display output messages") 
+
+
+#########################################################################################
+def Click_Save_Figure(b, widget, name_widget, output):
+        widget.result.savefig(f"Figures/{name_widget.value}", bbox_inches='tight')
+
+        with output:
+            print(" Done")
+            time.sleep(2)
+            clear_output()

@@ -1,84 +1,141 @@
-#Module for arbitrary hopping by user definde hopping and transition matrices
+#Module for arbitrary hopping by user defined hopping and transition matrices
 
 import numpy as np
+from scipy.linalg import expm # used for matrix exponentiation
 import ipywidgets as widgets
-import time, math
+import time, math, copy
 from IPython.display import clear_output
+from distutils.spawn import find_executable
 import matplotlib.pyplot as plt # Plotting
 import matplotlib as mpl
 from cycler import cycler #used for color cycles in mpl
-from Module_Widgets_and_Sliders import n_Slider
+from Module_Widgets_and_Sliders import n_Slider, checkbox
+from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
+from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
+
+mpl.rcParams['text.usetex'] = True
+
+#possible TODOS:
+    #write function to store hopping matrices and load them
+    #clean class
+    #document module
 
 class Hopping:
     
     def __init__(self, n=6):
         #n_Slider.value = n
         self.n = n_Slider
-        self.H = np.zeros((n,n))
-        self.T = np.eye(n)
-        self.button_to_add = widgets.Button(description="A Button")
-        self.button_to_add.on_click(self.test_button)
-        self.out = widgets.Output()
-        self.i = widgets.IntText(description="row", continuous_update=False, value=0)
-        self.j = widgets.IntText(description="column", continuous_update=False, value=1)
-        self.p = widgets.BoundedFloatText(description="probability", min=0., max=1., step=0.01, value=0.1, continuous_update=False)
-        self.button_to_delete = widgets.Button(description="A Button to undo latest operation")
-        self.button_to_delete.on_click(self.undo_button)
         self.n.observe(self.on_change_n)
+        
+        self.Reset_H_and_T()
+        self.Add_All_Buttons()
+        self.Add_ijp_widgets()
+        
+        self.old_Hs = []
+        self.old_Ts = []
     
+    
+    def is_checkbox(self):
+        return self.checkbox.value
+    
+    
+    def Add_All_Buttons(self):
+        self.button_to_add = button_to_add
+        self.button_to_undo = button_to_undo
+        self.button_to_reset = button_to_reset
+        self.button_to_show = button_to_show
+        
+        self.button_to_add.on_click(self.click_add)
+        self.button_to_undo.on_click(self.click_undo)
+        self.button_to_reset.on_click(self.click_reset)
+        self.button_to_show.on_click(self.click_show)
+        
+        self.out = widgets.Output()
+        self.checkbox = checkbox
+    
+    def Add_ijp_widgets(self):
+        self.i = i_IntText
+        self.j = j_IntText
+        self.p = p_BoundedFloatText
+        
     def on_change_n(self, change):
         _n = change.new["value"]
-        self.H = np.zeros((_n,_n))
+        self.H = np.eye(_n)
         self.T = np.eye(_n)
         
     
-    def Change_n(self):
-        pass
-        
+    def Show_H_and_T(self):
+        with self.out:
+            clear_output()
+            print(f"H = ", self.H, "", sep="\n")
+            print(f"T = ", self.T, sep="\n")
+            
     def AddHop(self):
-        _i = self.i.value
-        _j = self.j.value
+        with self.out:
+            clear_output()
+        _i = self.i.value - 1
+        _j = self.j.value - 1
         _p = self.p.value
+        _n_max = self.n.max
+        
+        if _i != _j:
+            assert self.T[_i, _i] -_p >= 0 , self.out.append_stderr(f"Error hopping would have caused T[{_i},{_i}] <=0.")
         
         self.H[_i, _j] = 1.
         self.H[_j, _i] = 1.
-        self.T[_i, _j] = _p
-        self.T[_j, _i] = _p
+        self.T[_i, _j] += _p
+        self.T[_j, _i] += _p
         self.T[_i, _i] -= _p
         self.T[_j, _j] -= _p
         
+        #add to Ts and Hs after second hopping
+        self.old_Hs.append(copy.deepcopy(self.H))
+        self.old_Ts.append(copy.deepcopy(self.T))
+            
     def Reset_H_and_T(self):
         _n = self.n.value
-        self.H = np.zeros((_n, _n))
+        self.H = np.eye(_n)
         self.T = np.eye(_n)
-    
-    def set_previous_ij(self):
-        self.old_i = self.i.value
-        self.old_j = self.j.value
         
+    #realy memory inefficent, work in progress
     def Undo_Hopping(self):
-        self.H[self.old_i, self.old_j] = 0.
-        self.T[self.old_i, self.old_j] = 0.
+        if len(self.old_Hs) > 1:
+            self.H = self.old_Hs[-2]
+            self.T = self.old_Ts[-2]
+            self.old_Hs.pop()
+            self.old_Ts.pop()
+        else:
+            self.Reset_H_and_T()
         
-    def undo_button(self, but):
+    def click_undo(self, b):
         self.Undo_Hopping()
         
-        with self.out:
-            print("undone")
-            #print(self.H)
-            #print(self.T)
-            time.sleep(2)
-            clear_output()
+        if self.is_checkbox():
+            with self.out:
+                print("undone")
+                time.sleep(2)
+                clear_output()
             
-    def test_button(self, but):
+    def click_add(self, b):
         self.AddHop()
-        self.set_previous_ij()
-        with self.out:
-            print("done")
-            #print(self.H)
-            #print(self.T)
-            time.sleep(2)
-            clear_output()
+        
+        if self.is_checkbox():
+            with self.out:
+                print("added hopping")
+                time.sleep(2)
+                clear_output()
+            
+    def click_reset(self, b):
+        self.Reset_H_and_T()
+        
+        if self.is_checkbox():
+            with self.out:
+                print("H and T reset")
+                time.sleep(2)
+                clear_output()
+            
+    def click_show(self, b):
+        self.Show_H_and_T()
     
     def Calc_Markov(self, state=[1,0,0,0,0,0], n_its=400):
     ### Check if state is valid, i.e real, of unit length and compatible with `n`.
@@ -119,20 +176,107 @@ class Hopping:
         ### actual plotting
         for i, site in enumerate(np.arange(_n)[::-1]):
             plt.plot(observations[:, site], ".-", label=f"Site {site+1}", color=colors[i])
-        legend = plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-    
-        #plt.annotate("hallo", xytext=(0.5,0.2))
-        plt.annotate("T = ""\n"f"{self.T}", xy=(1, 1),
-                xytext=(1.4, 0.3), textcoords='axes fraction',
-                horizontalalignment='left', verticalalignment='top',
-                )
+        ax = plt.gca()
+        handles, labels = ax.get_legend_handles_labels()
+        plt.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc="upper left", ncol=2)
         
-        eq1 = (r"\begin{eqnarray*}"
-       r"|\nabla\phi| &=& 1,\\"
-       r"\frac{\partial \phi}{\partial t} + U|\nabla \phi| &=& 0 "
-       r"\end{eqnarray*}")
-        plt.text(1, 0.9, eq1, color="C2", fontsize=18,
-        horizontalalignment="right", verticalalignment="top")
+       
+        if self.find_latex():
+            matrix = self.Latex_Matrix() % tuple(self.T.flatten())
+            plt.annotate(text=f"T = {matrix}", xy=(0,0), xytext=(1.02, 0.0), xycoords="axes fraction", horizontalalignment="left", verticalalignment="bottom")
+        else:
+            matrix = self.T.round(2)
+            plt.annotate(text="T = ""\n"f"{matrix}", xy=(0,0), xytext=(1.02, 0.0), xycoords="axes fraction", horizontalalignment="left", verticalalignment="bottom")
 
         plt.show()
         return fig
+    
+    def Latex_Matrix(self, precision=2):
+        _p = precision
+        _N = self.n.value
+
+        beginning=r"$ \left( \begin{array}{"
+        formatting=_N*r'c'+r'}'
+        array_rows=(_N-1)*((_N-1)*rf"%.{_p}f & "+rf"%.{_p}f \\")
+        final_row=(_N-1)*rf"%.{_p}f & "+rf"%.{_p}f "
+        end=r"\end{array} \right) $"
+
+        matrix=beginning+formatting+array_rows+final_row+end
+        return matrix
+    
+    def Latex_Matrix2(self, precision=1):
+        _p = precision
+        _N = self.n.value
+
+        beginning=r"$ \left( \begin{array}{"
+        formatting=_N*r'c'+r'}'
+        array_rows=(_N-1)*((_N-1)*rf"%.{_p}f \mathrm{{e}}^{{%.{_p}f \mathrm{{i}}}} & "+rf"%.{_p}f \mathrm{{e}}^{{%.{_p}f \mathrm{{i}}}} \\")
+        final_row=(_N-1)*rf"%.{_p}f \mathrm{{e}}^{{%.{_p}f \mathrm{{i}}}} & "+rf"%.{_p}f \mathrm{{e}}^{{%.{_p}f \mathrm{{i}}}} "
+        end=r"\end{array} \right) $"
+
+        matrix=beginning+formatting+array_rows+final_row+end
+        return matrix
+    
+    def Time_Evolution_Operator(self):
+        return expm(-1j * self.T)
+
+    
+    def Calc_QM(self, state=[1,0,0,0,0,0], n_its=400):
+        """TODO: add doc string"""
+        _n = self.n.value
+        #Check if state is valid
+        #TODO: possibly add optin of automatically normalizing state
+        assert math.isclose(np.linalg.norm(state), 1, rel_tol=1e-04), f"The norm of the state vector {state} = {np.linalg.norm(state)} != 1"
+        
+        ### check if `n_its` is a positive integer
+        assert n_its >= 0, "n_its must be greater or equal to 0."
+        assert type(n_its) == int, f"n_its must be an integer not {type(_n)}"
+        
+        U = self.Time_Evolution_Operator()
+
+        state = np.array(state)
+        observations = [state]
+        for _ in np.arange(n_its):
+            state = U @ state
+            observations.append(state)
+        return np.array(observations)
+
+    def Plot_QM_Evolution(self, state=[1,0,0,0,0,0], n_its=400):
+        #TODO: write documentation
+        observations = self.Calc_QM(state, n_its)
+        _n = self.n.value
+
+        fig = plt.figure(figsize=(10,6))
+        plt.title(f"QM evolution for graph with $n={_n}$ sites, with initial state {state}")
+        plt.xlabel(r"Number of iterations $n_{\mathrm{its}}$")
+        plt.ylabel(r"Probability of finding particle at site $i$")
+        plt.grid()
+
+        mpl.rcParams['axes.prop_cycle'] = cycler("color", plt.cm.get_cmap("tab10").reversed().colors[-_n:])
+
+        for site in np.arange(len(state))[::-1]:
+            plt.plot(np.abs(observations[:, site])**2, ".-", label=f"Site {site+1}", )
+        ax = plt.gca()
+        handles, labels = ax.get_legend_handles_labels()
+        plt.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc="upper left", ncol=2)
+        
+        U = self.Time_Evolution_Operator()
+        phase = np.angle(U)
+        magnitude = np.abs(U)
+        vals = tuple(np.dstack((magnitude, phase)).flatten())
+        
+        if self.find_latex():
+            matrix = self.Latex_Matrix2() % vals
+            plt.annotate(text=f"U = {matrix}", xy=(0,0), xytext=(1.02, 0.0), xycoords="axes fraction", horizontalalignment="left", verticalalignment="bottom")
+        else:
+            matrix = U.round(2)
+            plt.annotate(text="U = ""\n"f"{matrix}", xy=(0,0), xytext=(1.02, 0.0), xycoords="axes fraction", horizontalalignment="left", verticalalignment="bottom")
+            
+        
+
+
+        plt.show()
+        return fig
+    
+    def find_latex(self):
+        return find_executable('latex')
