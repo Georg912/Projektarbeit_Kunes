@@ -8,6 +8,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt # Plotting
 from cycler import cycler #used for color cycles in mpl
 
+#possible TODOS:
+    # normalize wavefunction after user input, such that no errors occur
+    #TODO: display U or T next to image to compare
+    #TODO let input recognize + between complex numbers, e.g. 1+1j
+
 ###########################################################################################################
 def Time_Evolution_Operator(n=6, t=0.1):
     '''TODO: write documentation'''
@@ -48,7 +53,9 @@ def Plot_QM_Evolution(state=[1,0,0,0,0,0], n_its=400, **kwargs):
 
     for site in np.arange(len(state))[::-1]:
         plt.plot(np.abs(observations[:, site])**2, ".-", label=f"Site {site+1}", )
-    legend = plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+    ax = plt.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    plt.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc="upper left")
 
     plt.show()
     return fig
@@ -80,7 +87,7 @@ def Plot_QM_with_Eigenstates(state=[1,0,0,0,0,0], n_its=50, **kwargs):
     observations = Calc_QM_with_Eigenstates(state, n_its, **kwargs)
     n = kwargs.get("n", 6)
 
-    fig = plt.figure(figsize=(10,6))
+    fig = plt.figure(figsize=(12,6))
     plt.title(f"QM evolution of the $n={n}$-ring with initial state {state} using eigenbasis of $H$, $p_1 = {kwargs.get('p1', 0.1)}$")
     plt.xlabel(r"Number of iterations $n_{\mathrm{its}}$")
     plt.ylabel(r"Probability of finding particle at site $i$")
@@ -90,7 +97,9 @@ def Plot_QM_with_Eigenstates(state=[1,0,0,0,0,0], n_its=50, **kwargs):
 
     for site in np.arange(len(state))[::-1]:
         plt.plot(np.abs(observations[:, site])**2, ".-", label=f"Site {site+1}", )
-    legend = plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+    ax = plt.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    plt.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc="upper left")
 
     plt.show()
     return fig

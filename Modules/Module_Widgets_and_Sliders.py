@@ -5,6 +5,10 @@ from ipywidgets import Layout
 import numpy as np
 from IPython.display import clear_output
 from Module_Utilities import check_if_int
+from Module_Symmetry_and_Gauge import Hopping_Matrix_with_Phase as H
+from Module_Symmetry_and_Gauge import Right_Translation_Matrix as T
+from Module_Symmetry_and_Gauge import Magnetic_Flux_Matrix as M
+from Module_Symmetry_and_Gauge import Reflection_Matrix as R
 
 ###########################################################################################################
 Iterations_Slider = widgets.IntSlider(
@@ -97,7 +101,7 @@ Text_Box = widgets.Text(continuous_update=False,
 
 Save_Figure_Button = widgets.Button(
         layout=Layout(width = "5cm"),
-        description="Click to save current figure",
+        description="Save Current Figure",
         style = {'description_width': 'initial'}
         )
 
@@ -433,3 +437,38 @@ def Click_Save_Figure(b, widget, name_widget, output):
             print(" Done")
             time.sleep(2)
             clear_output()
+            
+#############################################################
+Hamilton_Dropdown = widgets.Dropdown(
+    equals=np.array_equal, #otherwise "value" checks element wise
+    options=(("H", H), ("M", M)),
+    value=H,#np.array([1,0,0,0,0,0]),
+    description='Matrix:',
+    style = {'description_width': 'initial'},
+    continuous_update=False,
+)
+
+Matrix1_Dropdown = widgets.Dropdown(
+    equals=np.array_equal, #otherwise "value" checks element wise
+    options=((H.name, H), (M.name, M), (T.name, T), (R.name, R)),
+    value=H,#np.array([1,0,0,0,0,0]),
+    description='Matrix 1:',
+    style = {'description_width': 'initial'},
+    continuous_update=False,
+)
+
+Matrix2_Dropdown = widgets.Dropdown(
+    equals=np.array_equal, #otherwise "value" checks element wise
+    options=((H.name, H), (M.name, M), (T.name, T), (R.name, R)),
+    value=H,#np.array([1,0,0,0,0,0]),
+    description='Matrix 2:',
+    style = {'description_width': 'initial'},
+    continuous_update=False,
+)
+
+
+
+
+
+
+

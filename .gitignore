@@ -255,6 +255,10 @@ TSWLatexianTemp*
 
 *.DS_Store
 
-# python bytecote
+### python bytecote
 *.pyc
 __pycache__
+.ipynb_checkpoints
+
+### VisualStudioCode ###
+.vscode/**/* instead - see comments
