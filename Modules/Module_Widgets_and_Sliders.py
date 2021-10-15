@@ -10,6 +10,7 @@ from Module_Symmetry_and_Gauge import Right_Translation_Matrix as T
 from Module_Symmetry_and_Gauge import Magnetic_Flux_Matrix as M
 from Module_Symmetry_and_Gauge import Reflection_Matrix as R
 
+out = widgets.Output()
 ###########################################################################################################
 Iterations_Slider = widgets.IntSlider(
             min=1,
@@ -128,7 +129,6 @@ def transform(inp):
     inp = list(map(check_if_int, inp.strip('][').split(',')))
         #print(Initial_State.value, type(Initial_State.value), inp, type(inp))
         #print("test")
-
     #Avoid duplicate entries in `Initial_State.options'
     if inp not in Initial_State.options:
         Initial_State.options += tuple([inp])
@@ -270,42 +270,35 @@ phase_dict = {
 ###########################################################################################################
 #Linking Sliders *****************************************************************************
 #TODO: delete print statements 
-def cast_phase_text_to_array(user_phase):
+def cast_phase_text_to_array(user_phase, dropdown):
     user_phase_list = list(map(check_if_int, user_phase.strip('][').split(',')))
     user_phase_tuple = (f"{list(np.round(user_phase_list, 2))}", user_phase_list)
     
     #Avoid duplicate entries in `phase_Dropdown.options'
-    if user_phase_tuple[1] not in [b[1] for b in phase_Dropdown.options] and \
-        str(user_phase_tuple[1]) not in [b[0] for b in phase_Dropdown.options]:
-        phase_Dropdown.options += tuple([user_phase_tuple])
+    if user_phase_tuple[1] not in [b[1] for b in dropdown.options] and \
+        str(user_phase_tuple[1]) not in [b[0] for b in dropdown.options]:
+        dropdown.options += tuple([user_phase_tuple])
     return user_phase_list
 
 ###########################################################################################################
-def set_phase_options(n):
+def set_phase_options(n, dropdown, _dict):
     # `options` takes a list of key-value pair, where for estetic reasons `key` is the rounded array of `values`
-    phase_Dropdown.options = [(f"{list(np.round(item, 2))}", item) for item in phase_dict[n]]
+    dropdown.options = [(f"{list(np.round(item, 2))}", item) for item in _dict[n]]
     #print(phase_Dropdown.options)
-    return phase_Dropdown.value
+    return dropdown.value
 
 ###########################################################################################################
-def set_initial_user_phase(n):
-    phase_Text_Box.value = str(phase_Dropdown.value)
-    return phase_Text_Box.value
-
-###########################################################################################################
-def change_phase_text(phase):
-    phase_Text_Box.value = phase_Dropdown.label
-    return phase_Text_Box.value
-
-
+def set_initial_user_phase(n, dropdown, text):
+    text.value = str(dropdown.value)
+    return text.value
 
 
 
 #TODO: change phase slider to phase dropdown naming 
-widgets.dlink((n_Slider, 'value'), (phase_Dropdown, 'value'), set_phase_options);
-widgets.dlink((n_Slider, 'value'), (phase_Text_Box, 'value'), set_initial_user_phase);
-widgets.dlink((phase_Text_Box, 'value'), (phase_Dropdown, 'value'), cast_phase_text_to_array);
-widgets.dlink((phase_Dropdown, "index"), (phase_Text_Box, 'value'), change_phase_text);
+widgets.dlink((n_Slider, 'value'), (phase_Dropdown, 'value'), lambda x: set_phase_options(n=x, dropdown=phase_Dropdown, _dict=phase_dict));
+widgets.dlink((n_Slider, 'value'), (phase_Text_Box, 'value'), lambda x: set_initial_user_phase(n=x, dropdown=phase_Dropdown, text=phase_Text_Box));
+widgets.dlink((phase_Text_Box, 'value'), (phase_Dropdown, 'value'), lambda x: cast_phase_text_to_array(user_phase=x, dropdown=phase_Dropdown));
+widgets.dlink((phase_Dropdown, "label"), (phase_Text_Box, 'value'))
 
 precision_Slider = widgets.IntSlider(
             min=0,
@@ -467,8 +460,58 @@ Matrix2_Dropdown = widgets.Dropdown(
 )
 
 
+#################################################################
+#phi slider options
+
+phi_Dropdown = widgets.Dropdown(
+    equals=np.array_equal, #otherwise "value" checks element wise
+    options=[('[1, 2, 3, 4, 5, 6]', [1, 2, 3, 4, 5, 6])],
+    value=[1,2,3,4,5,6],#np.array([1,0,0,0,0,0]),
+    description=r'Choose Phase Vector $\varphi$:',
+    style = {'description_width': 'initial'},
+    continuous_update=False,
+    layout=Layout(width = "15cm")
+)
 
 
+phi_Text_Box = widgets.Text(continuous_update=False,
+                placeholder='Input Phase Vector',
+                description=r'User Phase Vector $\varphi$:',
+                value=str(Initial_State.value),
+                style = {'description_width': 'initial'},
+                layout=Layout(width = "15cm"),
+                )
+
+entries = 10
+d1 = dict(zip(np.arange(2,entries+1), [list(np.arange(1,x)) for x in np.arange(3, entries+2)]))
+d2 = dict(zip(np.arange(2,entries+1), [list(np.pad([int(x * (x-1) / 2)], (0,x-2), "constant", constant_values=int(0))) for x in np.arange(3, entries+2)]))
+d3 = dict(zip(np.arange(2,entries+1), [list(np.random.rand(x-1).round(2)) for x in np.arange(3, entries+2)]))
+d4 = dict(zip(np.arange(2,entries+1), [list((np.resize([1,-1], x-1) * np.pi/2).round(2)) for x in np.arange(3, entries+2)]))
+ks = list(d1.keys())
+phi_dict = {k: [d1[k], d2[k], d3[k], d4[k]] for k in ks}
+
+widgets.dlink((n_Slider, 'value'), (phi_Dropdown, 'value'), lambda x: set_phase_options(n=x, dropdown=phi_Dropdown, _dict=phi_dict));
+widgets.dlink((n_Slider, 'value'), (phi_Text_Box, 'value'), lambda x: set_initial_user_phase(n=x, dropdown=phi_Dropdown, text=phi_Text_Box));
+widgets.dlink((phi_Text_Box, 'value'), (phi_Dropdown, 'value'), lambda x: cast_phase_text_to_array(user_phase=x, dropdown=phi_Dropdown));
+widgets.dlink((phi_Dropdown, "label"), (phi_Text_Box, 'value'))
+
+button_permute = widgets.Button(
+                    layout=Layout(width = "5cm"),
+                    description=r'permute phase',
+                    style = {'description_width': 'initial'}
+                    )
 
 
+def cast_permutation_to_dropdown_tuple(user_phase, dropdown):
+    user_phase_tuple = (f"{list(np.round(user_phase, 2))}", user_phase)
+    #Avoid duplicate entries in `phase_Dropdown.options'
+    if user_phase_tuple[1] not in [b[1] for b in dropdown.options] and \
+        str(user_phase_tuple[1]) not in [b[0] for b in dropdown.options]:
+        dropdown.options += tuple([user_phase_tuple])
+        
+def click_permute(b):
+    new_phi = list(np.random.permutation(phi_Dropdown.value))
+    cast_permutation_to_dropdown_tuple(new_phi, phi_Dropdown)
+    phi_Dropdown.value = new_phi
 
+button_permute.on_click(click_permute)
