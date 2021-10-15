@@ -36,7 +36,7 @@ or
 I prefer [Jupyterlab](https://jupyterlab.readthedocs.io/en/stable/) as one can customize and extend it compared to simple `Jupyter`.
 
 # Mac OS
-I recommend installing python via a package manager like [Homebrew](https://brew.sh/). An installation guide on how to install `PYthon3` that way can be found [here](https://docs.python-guide.org/starting/install3/osx/).
+I recommend installing python via a package manager like [Homebrew](https://brew.sh/). An installation guide on how to install `Python3` that way can be found [here](https://docs.python-guide.org/starting/install3/osx/).
 
 After installing `Python` and thus `PIP` one can use
 
