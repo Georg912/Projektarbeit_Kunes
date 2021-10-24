@@ -12,6 +12,8 @@ from cycler import cycler #used for color cycles in mpl
 from Module_Widgets_and_Sliders import n_Slider, checkbox
 from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
 from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
+from Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText
+from scipy.sparse import diags
 
 mpl.rcParams['text.usetex'] = True
 
@@ -33,7 +35,35 @@ class Hopping:
         
         self.old_Hs = []
         self.old_Ts = []
+        
+        self.pbc_checkbox = checkbox_periodic_boundary
+        self.pbc_checkbox.observe(self.tick_boundary_checkbox, names="value")
+        self.hide()
+        
     
+    def tick_boundary_checkbox(self, change):
+        self.hide()
+        self.Reset_H_and_T()
+    
+            
+    def hide(self):
+        if self.pbc_checkbox.value == True:
+            self.i.layout.visibility = "hidden"
+            self.j.layout.visibility = "hidden"
+            self.p.layout.visibility = "hidden"
+            self.p1.layout.visibility = "visible"
+            self.p2.layout.visibility = "visible"
+            self.p3.layout.visibility = "visible"
+            self.button_to_undo.layout.visibility = "hidden"
+        else:
+            self.i.layout.visibility = "visible"
+            self.j.layout.visibility = "visible"
+            self.p.layout.visibility = "visible"
+            self.p1.layout.visibility = "hidden"
+            self.p2.layout.visibility = "hidden"
+            self.p3.layout.visibility = "hidden"
+            self.button_to_undo.layout.visibility = "visible"
+            
     
     def is_checkbox(self):
         return self.checkbox.value
@@ -58,6 +88,10 @@ class Hopping:
         self.j = j_IntText
         self.p = p_BoundedFloatText
         
+        self.p1 = p1_BoundedFloatText
+        self.p2 = p2_BoundedFloatText
+        self.p3 = p3_BoundedFloatText
+        
     def on_change_n(self, change):
         _n = change.new["value"]
         self.H = np.eye(_n)
@@ -69,8 +103,43 @@ class Hopping:
             clear_output()
             print(f"H = ", self.H, "", sep="\n")
             print(f"T = ", self.T, sep="\n")
-            
+    
+    #TODO: check if n is large enough for p2 and p3
+    def Add_Hop_PBC(self):
+        _n = self.n.value
+        _p1 = self.p1.value
+        _p2 = self.p2.value
+        _p3 = self.p3.value
+        
+        H1, H2, H3 = np.zeros((_n,_n)), np.zeros((_n,_n)), np.zeros((_n,_n))
+        if self.p1.value > 0.:
+            diagonal_entries = [np.ones(_n-1), np.ones(_n-1)]
+            H1 = diags(diagonal_entries, [-1, 1]).toarray()
+            if _n >= 3:
+                H1[[0, _n-1], [_n-1, 0]] = 1
+        if self.p2.value > 0.:
+            diagonal_entries = [np.ones(2), np.ones(_n-2), np.ones(_n-2), np.ones(2)]
+            if _n >= 5:
+                H2 = diags(diagonal_entries, [-_n+2, -2, 2, _n-2]).toarray()
+                H2[[0, _n-2], [_n-2, 0]] = 1
+        if self.p3.value > 0.:
+            if _n >= 7:
+                diagonal_entries = [np.ones(3), np.ones(_n-3), np.ones(_n-3), np.ones(3)]
+                H3 = diags(diagonal_entries, [-_n+3, -3, 3, _n-3]).toarray()
+        assert 2 * (_p1 + _p2 * (_n>=5) + _p3 * (_n>=7)) <= 1. , self.out.append_stderr(f"Error negative probability. For n = {_n}, p0 = 1 - 2(p1{' + p2' if _n>=5 else ''}{' + p3' if _n>=7 else ''}) = 1 - 2 * ({_p1}{' + ' + str(_p2) if _n>=5 else ''}{' + ' +str(_p3) if _n>=7 else ''}) = {1 - 2 * (_p1 + (_p2 if _n>=5 else 0) + (_p3 if _n>=7 else 0)):.3f})")
+        
+        _H = H1 + H2 + H3
+        _T = (1 - 2 * (_p1 + _p2 * (_n>=5) + _p3 * (_n>=7))) * np.eye(_n) + _p1 * H1 + _p2 * H2 + _p3 * H3
+        self.H = _H
+        self.T = _T
+        return
+    ### take care of the values not on the lower and upper main diagonal
+        #H[[0, n-1], [n-1, 0]] = 1
+    
     def AddHop(self):
+        if self.pbc_checkbox.value == True:
+            self.Add_Hop_PBC()
+            return None
         with self.out:
             clear_output()
         _i = self.i.value - 1

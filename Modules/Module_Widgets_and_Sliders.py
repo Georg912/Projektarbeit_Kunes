@@ -387,7 +387,7 @@ i_IntText = widgets.BoundedIntText(
                 max=n_Slider.value,
                 step=1,
                 value=0,
-                layout=Layout(width = "10cm"),# height="80px"),#"auto"),
+                layout=Layout(width = "5cm"),# height="80px"),#"auto"),
                 description=r"Hopping from site $i$ = ",
                 style = {'description_width': 'initial'},
                 continuous_update=False
@@ -399,7 +399,7 @@ j_IntText = widgets.BoundedIntText(
                 max=n_Slider.value,
                 step=1,
                 value=2,
-                layout=Layout(width = "10cm"),# height="80px"),#"auto"),
+                layout=Layout(width = "5cm"),# height="80px"),#"auto"),
                 description=r'To site $j$ =',
                 style = {'description_width': 'initial'},
                 continuous_update=False
@@ -411,7 +411,7 @@ p_BoundedFloatText = widgets.BoundedFloatText(
                 step=0.01,
                 value=0.1,
                 style = {'description_width': 'initial'},
-                layout=Layout(width = "10cm"),# height="80px"),#"auto"),
+                layout=Layout(width = "5cm"),# height="80px"),#"auto"),
                 description=r"With ${p_{ij}}$ = ",
                 continuous_update=False
                 )
@@ -419,7 +419,11 @@ p_BoundedFloatText = widgets.BoundedFloatText(
 widgets.dlink((n_Slider, "value"), (i_IntText, "max"))
 widgets.dlink((n_Slider, "value"), (j_IntText, "max"))
     
-checkbox = widgets.Checkbox(value=False, description= "Display output messages") 
+checkbox = widgets.Checkbox(
+                value=False,
+                description= "Display output messages",
+                style = {'description_width': 'initial'},
+                layout=Layout(width = "5cm")) 
 
 
 #########################################################################################
@@ -515,3 +519,48 @@ def click_permute(b):
     phi_Dropdown.value = new_phi
 
 button_permute.on_click(click_permute)
+
+
+
+###############################################
+checkbox_periodic_boundary = widgets.Checkbox(
+            value=False,
+            description= "Use periodic isotropic n-chain",
+            style = {'description_width': 'initial'},
+            layout=Layout(width = "7cm"))
+
+
+p1_BoundedFloatText = widgets.BoundedFloatText(
+                min=0,
+                max=0.5,
+                step=0.01,
+                value=0.1,
+                style = {'description_width': 'initial'},
+                layout=Layout(width = "4cm"),# height="80px"),#"auto"),
+                description=r"$p_1$ = ",
+                continuous_update=False
+                )
+
+p2_BoundedFloatText = widgets.BoundedFloatText(
+                min=0,
+                max=0.5,
+                step=0.001,
+                value=0.,
+                style = {'description_width': 'initial'},
+                layout=Layout(width = "4cm"),# height="80px"),#"auto"),
+                description=r"$p_2$ = ",
+                continuous_update=False
+                )
+
+p3_BoundedFloatText = widgets.BoundedFloatText(
+                min=0,
+                max=0.5,
+                step=0.0001,
+                value=0.,
+                layout=Layout(width = "4cm"),# height="80px"),#"auto"),
+                description=r"$p_3$ = ",
+                continuous_update=False,
+                style = {'description_width': 'initial'},
+                )
+
+#########################################################################################################
