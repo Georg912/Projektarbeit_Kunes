@@ -536,8 +536,8 @@ p1_BoundedFloatText = widgets.BoundedFloatText(
                 step=0.01,
                 value=0.1,
                 style = {'description_width': 'initial'},
-                layout=Layout(width = "4cm"),# height="80px"),#"auto"),
-                description=r"$p_1$ = ",
+                layout=Layout(width = "5cm"),# height="80px"),#"auto"),
+                description=r"1st: $p_1$ = ",
                 continuous_update=False
                 )
 
@@ -547,8 +547,8 @@ p2_BoundedFloatText = widgets.BoundedFloatText(
                 step=0.001,
                 value=0.,
                 style = {'description_width': 'initial'},
-                layout=Layout(width = "4cm"),# height="80px"),#"auto"),
-                description=r"$p_2$ = ",
+                layout=Layout(width = "5cm"),# height="80px"),#"auto"),
+                description=r"2nd: $p_2$ = ",
                 continuous_update=False
                 )
 
@@ -557,8 +557,8 @@ p3_BoundedFloatText = widgets.BoundedFloatText(
                 max=0.5,
                 step=0.0001,
                 value=0.,
-                layout=Layout(width = "4cm"),# height="80px"),#"auto"),
-                description=r"$p_3$ = ",
+                layout=Layout(width = "5cm"),# height="80px"),#"auto"),
+                description=r"3rd: $p_3$ = ",
                 continuous_update=False,
                 style = {'description_width': 'initial'},
                 )
