@@ -53,15 +53,18 @@ def Magnetic_Flux_Matrix(n = 6, **kwargs):
     """
     TODO: write documentation
     """
-
+    
+    phi = kwargs.get("phi", np.ones(n))
+    phi = np.array(phi)
     ### Check if system is large enough, i.e. if n=>2
     assert n >= 2, "error n must be greater or equal to 2"#
-    
-    diagonal_entries = [np.ones(n-1)*np.exp(-1j), np.ones(n-1)*np.exp(1j)]
+
+    #print(phi)
+    diagonal_entries = [np.exp(-1j*phi[:-1]), np.exp(1j*phi[:-1])]
     M = diags(diagonal_entries, [-1, 1]).toarray()
     #print(np.round(M))
     # take care of the values not on the lower and upper main diagonal
-    M[0, n-1] = np.exp(-1j)
+    M[0, n-1] = np.exp(-1j*phi[-1])
     #print(np.round(M))
     M[n-1, 0] = np.conj(M[0, n-1])
     #print(np.round(M))
@@ -70,15 +73,20 @@ def Magnetic_Flux_Matrix(n = 6, **kwargs):
 
 ###########################################################################################################
 def Show_Magnetic_Flux(**kwargs):
-    M = Magnetic_Flux_Matrix(n=kwargs.get("n", 6))
-    H = Hopping_Matrix_with_Phase(n=kwargs.get("n", 6))
+    
+    M = Magnetic_Flux_Matrix(**kwargs)
+    H = Hopping_Matrix_with_Phase(**kwargs)
     
     precision = kwargs.get("precision", 2)
     print(f"M = ", np.round(M, precision), "", sep="\n")
     eigvals_M = np.linalg.eigvalsh(M)
-    print(rf"Eigenvalues of M: {np.round(eigvals_M, precision+1)}")
+    print(f"Eigenvalues of M: {np.round(eigvals_M, precision+1)}")
     eigvals_H = np.linalg.eigvalsh(H)
-    print(rf"Eigenvalues of H: {np.round(eigvals_H, precision+1)}")
+    print(f"Eigenvalues of H: {np.round(eigvals_H, precision+1)}")
+    
+    _n = kwargs.get("n", 6)
+    _phi = kwargs.get("phi", np.ones(_n))
+    print(f"Total phase = {np.sum(_phi).round(2)}")
     
 
 
