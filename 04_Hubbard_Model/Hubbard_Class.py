@@ -2,21 +2,25 @@
 
 import numpy as np
 from more_itertools import distinct_permutations
-# # from scipy.linalg import expm # used for matrix exponentiation
+
+import scipy.spatial.distance as sp
 import ipywidgets as widgets
 import time  # , math, copy
 # # from IPython.display import clear_output
 # # from distutils.spawn import find_executable
-# # import matplotlib.pyplot as plt # Plotting
-# # import matplotlib as mpl
+import matplotlib.pyplot as plt  # Plotting
+import matplotlib as mpl
 # # from cycler import cycler #used for color cycles in mpl
 from Widgets import n_Slider, s_up_Slider, s_down_Slider
+from Widgets import u_Slider, t_Slider
 # # from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
 # # from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
 # # from Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText
 # # from scipy.sparse import diags
 
 # # mpl.rcParams['text.usetex'] = True
+import numba as nb
+from numba import jit, njit
 
 # #possible TODOS:
 #     #write function to store hopping matrices and load them
@@ -24,9 +28,31 @@ from Widgets import n_Slider, s_up_Slider, s_down_Slider
 #     #document module
 
 
+@jit
+def HopTest(x, y, cre, anh):
+    return (x[cre] * y[anh]) == 1 and (x[anh] + y[cre]) == 0
+
+
+@jit
+def Hop_sign(x, i):
+    return (-1)**np.sum(x[i+1:])
+
+
+@njit(fastmath=True, parallel=True)
+def eucl_naive(A, B, ii, jj):
+    assert A.shape[1] == B.shape[1]
+    C = np.empty((A.shape[0], B.shape[0]), A.dtype)
+
+    for i in nb.prange(A.shape[0]):
+        for j in range(B.shape[0]):
+            C[i, j] = 4*Hop_sign(A[i, :], ii) * Hop_sign(B[j, :],
+                                                         jj) if HopTest(A[i, :], B[j, :], ii, jj) else 1
+    return C
+
+
 class Hubbard:
 
-    def __init__(self, n=6, s_up=2, s_down=2):
+    def __init__(self, n=6, s_up=3, s_down=3):
 
         self.out = widgets.Output()
 
@@ -43,21 +69,31 @@ class Hubbard:
         self.s_down.observe(self.on_change_s_down, names="value")
 
         self.base = self.Construct_Basis()
+        self.hopping = self.Allowed_Hoppings()
+
+        self.Reset_H()
+
+        self.u = u_Slider
+        self.t = t_Slider
 
     def on_change_n(self, change):
         self.base = self.Construct_Basis()
+        self.hopping = self.Allowed_Hoppings()
+        self.Reset_H()
 
     def on_change_s_up(self, change):
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
             pass
         else:
             self.base = self.Construct_Basis()
+            self.Reset_H()
 
     def on_change_s_down(self, change):
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
             pass
         else:
             self.base = self.Construct_Basis()
+            self.Reset_H()
 
     def Construct_Basis(self):
         with self.out:
@@ -105,6 +141,156 @@ class Hubbard:
 
     def OpSzSz(self, i, j):
         return self.OpSz(i) @ self.OpSz(j)
+
+    @jit(forceobj=True)  # otherwise error message
+    def Allowed_Hoppings(self):
+        _n = self.n.value
+        r1 = np.arange(0, _n)
+        r2 = np.arange(1, _n+1) % _n
+
+        up_clockwise = np.stack((r1, r2)).T
+        up_counter_clockwise = np.fliplr(up_clockwise)
+        down_clockwise = up_clockwise + _n
+        down_counter_clockwise = up_counter_clockwise + _n
+
+        if (_n == 2):  # clockwise and counterclockwise are the same
+            self.hoppings = np.vstack((up_clockwise, down_clockwise))
+        else:
+            self.hoppings = np.vstack(
+                (up_clockwise, up_counter_clockwise, down_clockwise, down_counter_clockwise))
+
+    def test(self):
+        with self.out:
+            print(HopTest(self.base[0, :], self.base[1, :], 0, 1))
+
+    @jit(forceobj=True, cache=True)
+    def Calc_Ht(self):
+        _base = self.base
+        a = sp.cdist(_base, _base, metric="cityblock")
+        a = np.where(a == 2, 1, 0)
+
+        b = np.prod(np.array([eucl_naive(_base, _base, i, j)
+                              for i, j in self.hoppings]), axis=0)
+        b = np.where(b > 1, 1, np.where(b < -1, -1, 0))
+
+        self._Ht = a * b
+        return self._Ht
+
+    def Calc_Hu(self):
+        self._Hu = np.diag(self.nn())
+        return self._Hu
+
+    def Calc_H(self, u, t):
+        self._H = t * self.Ht + u * self.Hu
+        return self._H
+
+    def Reset_H(self):
+        self._H = None
+        self._Hu = None
+        self._Ht = None
+
+    @property
+    def Hu(self):
+        if self._Hu is None:
+            self._Hu = self.Calc_Hu()
+
+        return self._Hu
+
+    @property
+    def Ht(self):
+        if self._Ht is None:
+            self._Ht = self.Calc_Ht()
+
+        return self._Ht
+
+    def Calc_Eigvals_u(self, steps=10):
+        u_array = np.linspace(*self.u.value, num=steps)
+        vals = [np.linalg.eigvalsh(self.Calc_H(u, 1)) for u in u_array]
+        return np.array(vals), u_array
+
+    def Calc_Eigvals_t(self, steps=10):
+        t_array = np.linspace(*self.t.value, num=steps)
+        vals = [np.linalg.eigvalsh(self.Calc_H(10, t)) for t in t_array]
+        return np.array(vals), t_array
+
+    def Plot_Eigvals_u(self, **kwargs):
+        eigvals, u_array = self.Calc_Eigvals_u(kwargs.get("steps", 10))
+
+        fig = plt.figure(figsize=(10, 6))
+        plt.title(
+            f"Eigenvalues of Hubbard-Ring Hamiltonian H as a function of TODO $u$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s) and {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$")
+        plt.xlabel(r"todo $u$")
+        plt.ylabel(r"Eigenvalue(s)")
+        plt.grid()
+        axes = plt.plot(u_array, eigvals, ".-", c="orange")
+
+        n_bins = self.Get_Bin_Number_u()
+        max_eigvals = np.linalg.eigvalsh(self.Calc_H(self.u.max, 1))
+        bins = np.histogram(max_eigvals, bins=n_bins)[1]
+        digs = np.digitize(max_eigvals, bins)
+        digs[-1] -= 1
+        color_list = mpl.cm.get_cmap('tab10')
+        unique = np.unique(digs, return_counts=True)[1]
+        indices = np.cumsum(unique)
+
+        count = 0
+        for idx, ax in enumerate(axes):
+            ax.set_color(color_list(digs[idx]))
+            if idx == indices[count]-1:
+                ax.set_label(unique[count])
+                count += 1
+
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left",
+                   ncol=1, title="# of eigenvalues")
+        plt.show()
+        return fig
+
+    def Plot_Eigvals_t(self, **kwargs):
+        eigvals, t_array = self.Calc_Eigvals_t(kwargs.get("steps", 10))
+
+        fig = plt.figure(figsize=(10, 6))
+        plt.title(
+            f"Eigenvalues of Hubbard-Ring Hamiltonian H as a function of TODO $u$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s) and {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$")
+        plt.xlabel(r"todo $t$")
+        plt.ylabel(r"Eigenvalue(s)")
+        plt.grid()
+        axes = plt.plot(t_array, eigvals, ".-", c="orange")
+
+        n_bins = self.Get_Bin_Number_u()
+        max_eigvals = np.linalg.eigvalsh(self.Calc_H(self.u.max, 1))
+        bins = np.histogram(max_eigvals, bins=n_bins)[1]
+        digs = np.digitize(max_eigvals, bins)
+        digs[-1] -= 1
+        color_list = mpl.cm.get_cmap('tab10')
+        unique = np.unique(digs, return_counts=True)[1]
+        indices = np.cumsum(unique)
+
+        count = 0
+        for idx, ax in enumerate(axes):
+            ax.set_color(color_list(digs[idx]))
+            if idx == indices[count]-1:
+                ax.set_label(unique[count])
+                count += 1
+        plt.gca().invert_xaxis()
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left",
+                   ncol=1, title="# of eigenvalues")
+        plt.show()
+        return fig
+
+    def Get_Bin_Number_u(self):
+        _n = self.n.value
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+
+        if _n == 6 and _s_down == 3 and _s_up == 3:
+            return 4
+
+        if _n == 7:
+            if _s_up == 3 or _s_up == 4:
+                if _s_down == 3 or _s_down == 4:
+                    return 4
+        return 3
+
 
 # def
 
