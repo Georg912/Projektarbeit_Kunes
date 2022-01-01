@@ -76,6 +76,9 @@ class Hubbard:
         self.u = u_Slider
         self.t = t_Slider
 
+        self.eig_u = None
+        self.eig_t = None
+
     def on_change_n(self, change):
         self.base = self.Construct_Basis()
         self.hopping = self.Allowed_Hoppings()
@@ -188,6 +191,8 @@ class Hubbard:
         self._H = None
         self._Hu = None
         self._Ht = None
+        self.eig_u = None
+        self.eig_t = None
 
     @property
     def Hu(self):
@@ -204,17 +209,25 @@ class Hubbard:
         return self._Ht
 
     def Calc_Eigvals_u(self, steps=10):
-        u_array = np.linspace(*self.u.value, num=steps)
+        u_array = np.linspace(self.u.min, self.u.max, num=100)
         vals = [np.linalg.eigvalsh(self.Calc_H(u, 1)) for u in u_array]
+        self.eig_u = np.array(vals)
+        self.u_array = u_array
         return np.array(vals), u_array
 
     def Calc_Eigvals_t(self, steps=10):
-        t_array = np.linspace(*self.t.value, num=steps)
+        t_array = np.linspace(self.t.min, self.t.max, num=steps)
         vals = [np.linalg.eigvalsh(self.Calc_H(10, t)) for t in t_array]
+        self.eig_t = np.array(vals)
+        self.t_array = t_array
+
         return np.array(vals), t_array
 
     def Plot_Eigvals_u(self, **kwargs):
-        eigvals, u_array = self.Calc_Eigvals_u(kwargs.get("steps", 10))
+        if self.eig_u is None:
+            with self.out:
+                print("test")
+            self.Calc_Eigvals_u(kwargs.get("steps", 10))
 
         fig = plt.figure(figsize=(10, 6))
         plt.title(
@@ -222,7 +235,15 @@ class Hubbard:
         plt.xlabel(r"todo $u$")
         plt.ylabel(r"Eigenvalue(s)")
         plt.grid()
-        axes = plt.plot(u_array, eigvals, ".-", c="orange")
+        _u = self.u_array[self.u_array <= self.u.value[1]]
+        _u = _u[_u >= self.u.value[0]]
+
+        index_u_upper = np.where(self.u_array <= self.u.value[1], 1, 0)
+        index_u_lower = np.where(self.u_array >= self.u.value[0], 1, 0)
+
+        _eig_u = self.eig_u[np.argwhere(
+            (index_u_lower * index_u_upper) >= 1)].reshape(_u.size, -1)
+        axes = plt.plot(_u, _eig_u, ".-", c="orange")
 
         n_bins = self.Get_Bin_Number_u()
         max_eigvals = np.linalg.eigvalsh(self.Calc_H(self.u.max, 1))
