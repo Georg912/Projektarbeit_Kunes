@@ -1,9 +1,10 @@
 # #Module for arbitrary hopping by user defined hopping and transition matrices
 
-import numpy as np
+
 from more_itertools import distinct_permutations
 
 import scipy.spatial.distance as sp
+import numpy as np
 import ipywidgets as widgets
 import time  # , math, copy
 # # from IPython.display import clear_output
@@ -11,8 +12,9 @@ import time  # , math, copy
 import matplotlib.pyplot as plt  # Plotting
 import matplotlib as mpl
 # # from cycler import cycler #used for color cycles in mpl
-from Widgets import n_Slider, s_up_Slider, s_down_Slider
-from Widgets import u_Slider, t_Slider
+from Modules.Widgets import n_Slider, s_up_Slider, s_down_Slider
+from Modules.Widgets import u_Slider, t_Slider
+from Modules.Widgets import basis_index_Slider
 # # from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
 # # from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
 # # from Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText
@@ -68,69 +70,102 @@ class Hubbard:
         self.s_down.value = s_down
         self.s_down.observe(self.on_change_s_down, names="value")
 
-        self.base = self.Construct_Basis()
-        self.hopping = self.Allowed_Hoppings()
+        self.basis = self.Construct_Basis()
+        self.basis_index = basis_index_Slider
+        self.basis_index.max = self.basis.shape[0]
+        self.hoppings = self.Allowed_Hoppings()
 
         self.Reset_H()
 
         self.u = u_Slider
         self.t = t_Slider
 
-        self.eig_u = None
         self.eig_t = None
 
+    def show_basis(self, index, **kwargs):
+        """
+        Method to print basis vector at position `index` in occupation number basis. Also prints the total number of basis vectors, which is analytically given by nCr(n, s_up) * nCr(n, s_down)
+
+        Parameters
+        ----------
+        index : int
+            Index of the basis vector to display
+
+        Returns
+        -------
+        None
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+        print(f"Total number of basis states = {self.basis.shape[0]}")
+        print(f"Basis state {index} = {self.basis[index]}")
+
     def on_change_n(self, change):
-        self.base = self.Construct_Basis()
-        self.hopping = self.Allowed_Hoppings()
+        self.basis = self.Construct_Basis()
+        self.basis_index.max = self.basis.shape[0] - 1
+        self.hoppings = self.Allowed_Hoppings()
         self.Reset_H()
 
     def on_change_s_up(self, change):
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
             pass
         else:
-            self.base = self.Construct_Basis()
+            self.basis = self.Construct_Basis()
+            self.basis_index.max = self.basis.shape[0] - 1
             self.Reset_H()
 
     def on_change_s_down(self, change):
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
             pass
         else:
-            self.base = self.Construct_Basis()
+            self.basis = self.Construct_Basis()
+            self.basis_index.max = self.basis.shape[0] - 1
             self.Reset_H()
 
     def Construct_Basis(self):
-        with self.out:
-            _s_up = self.s_up.value
-            _s_down = self.s_down.value
-            _n = self.n.value
+        """
+        Return all possible m := nCr(n, s_up) * nCr(n, s_down) basis states for specific values of `n`, `s_up` and `s_down` by permuting one specific up an down state.
 
-            up_state = np.concatenate((np.ones(_s_up), np.zeros(_n - _s_up)))
-            down_state = np.concatenate(
-                (np.ones(_s_down), np.zeros(_n - _s_down)))
+        Returns
+        -------
+        basis : ndarray (m, 2*n)
+            array of basis states
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
 
-            all_up_states = np.array(tuple(distinct_permutations(up_state)))
-            all_down_states = np.array(
-                tuple(distinct_permutations(down_state)))
+        up_state = np.concatenate((np.ones(_s_up), np.zeros(_n - _s_up)))
+        down_state = np.concatenate(
+            (np.ones(_s_down), np.zeros(_n - _s_down)))
 
-            # reshape and repeat or tile to get all possible combinations:
-            up_repeated = np.repeat(
-                all_up_states, all_down_states.shape[0], axis=0)
-            down_repeated = np.tile(
-                all_down_states, (all_up_states.shape[0], 1))
+        all_up_states = np.array(tuple(distinct_permutations(up_state)))
+        all_down_states = np.array(
+            tuple(distinct_permutations(down_state)))
 
+        # reshape and repeat or tile to get all possible combinations:
+        up_repeated = np.repeat(
+            all_up_states, all_down_states.shape[0], axis=0)
+        down_repeated = np.tile(
+            all_down_states, (all_up_states.shape[0], 1))
+
+        # Combine up and down states
         return np.concatenate((up_repeated, down_repeated), axis=1)
 
     def up(self):
-        return self.base[:, : self.n.value]
+        return self.basis[:, : self.n.value]
 
     def down(self):
-        return self.base[:, self.n.value:]
+        return self.basis[:, self.n.value:]
 
     def nn(self):
         return np.sum(self.up() * self.down(), axis=1)
 
     def diag(self, i):
-        return self.base[:, i] * self.base[:, self.n.value + i]
+        return self.basis[:, i] * self.basis[:, self.n.value + i]
 
     def Double(self, i):
         return np.diag(self.diag(i))
@@ -157,18 +192,20 @@ class Hubbard:
         down_counter_clockwise = up_counter_clockwise + _n
 
         if (_n == 2):  # clockwise and counterclockwise are the same
-            self.hoppings = np.vstack((up_clockwise, down_clockwise))
+            hoppings = np.vstack((up_clockwise, down_clockwise))
         else:
-            self.hoppings = np.vstack(
+            hoppings = np.vstack(
                 (up_clockwise, up_counter_clockwise, down_clockwise, down_counter_clockwise))
+
+        return hoppings
 
     def test(self):
         with self.out:
-            print(HopTest(self.base[0, :], self.base[1, :], 0, 1))
+            print(HopTest(self.basis[0, :], self.basis[1, :], 0, 1))
 
-    @jit(forceobj=True, cache=True)
+    # @jit(forceobj=True, cache=True)
     def Calc_Ht(self):
-        _base = self.base
+        _base = self.basis
         a = sp.cdist(_base, _base, metric="cityblock")
         a = np.where(a == 2, 1, 0)
 
@@ -186,6 +223,28 @@ class Hubbard:
     def Calc_H(self, u, t):
         self._H = t * self.Ht + u * self.Hu
         return self._H
+
+    def Show_H(self, u, t, **kwargs):
+        """
+        Method to print total Hamiltonian H = u*Hu + t*Ht
+
+        Parameters
+        ----------
+        u : float
+            on-site interaction strength due to electric field
+        t : float
+            global hopping amplitude from site i to site j
+
+        Returns
+        -------
+        None
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+        print(f"H = \n{self.Calc_H(u,t)}")
 
     def Reset_H(self):
         self._H = None

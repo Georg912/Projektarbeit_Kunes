@@ -2,6 +2,7 @@
 import ipywidgets as widgets
 import time  # used for `sleep`
 from ipywidgets import Layout
+from scipy.special import comb as comb
 
 ########################################
 n_Slider = widgets.BoundedIntText(
@@ -75,6 +76,20 @@ t_Slider = widgets.FloatRangeSlider(
     readout_format='.1f',
 )
 ################################
+
+basis_index_Slider = widgets.BoundedIntText(
+    min=0,
+    max=comb(n_Slider.value, s_up_Slider.value) *
+    comb(n_Slider.value, s_down_Slider.value),
+    step=1,
+    value=6,
+    layout=Layout(width="3cm"),  # height="80px"),#"auto"),
+    description=r'State $=$',
+    style={'description_width': 'initial'},
+    continuous_update=False
+)
+
+#################################
 
 widgets.dlink((n_Slider, 'value'), (s_up_Slider, 'max'))
 widgets.dlink((n_Slider, 'value'), (s_down_Slider, 'max'))
