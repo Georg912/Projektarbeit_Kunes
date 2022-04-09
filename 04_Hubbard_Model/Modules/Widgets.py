@@ -39,7 +39,7 @@ s_down_Slider = widgets.BoundedIntText(
     continuous_update=False
 )
 ################################
-u_Slider = widgets.FloatRangeSlider(
+u_range_Slider = widgets.FloatRangeSlider(
     value=[2, 7],
     min=0,
     max=40.0,
@@ -64,7 +64,7 @@ steps_Slider = widgets.IntSlider(
     # readout_format='d'
 )
 ################################
-t_Slider = widgets.FloatRangeSlider(
+t_range_Slider = widgets.FloatRangeSlider(
     value=[0, 1],
     min=0,
     max=5,
@@ -76,7 +76,6 @@ t_Slider = widgets.FloatRangeSlider(
     readout_format='.1f',
 )
 ################################
-
 basis_index_Slider = widgets.BoundedIntText(
     min=0,
     max=comb(n_Slider.value, s_up_Slider.value) *
@@ -88,8 +87,30 @@ basis_index_Slider = widgets.BoundedIntText(
     style={'description_width': 'initial'},
     continuous_update=False
 )
-
 #################################
-
+u_Slider = widgets.FloatSlider(
+    value=2,
+    min=-5,
+    max=5,
+    step=0.1,
+    description=r'$U=$',
+    continuous_update=False,
+    orientation='horizontal',
+    readout=True,
+    readout_format='.1f',
+)
+################################
+t_Slider = widgets.FloatSlider(
+    value=1,
+    min=-5,
+    max=5,
+    step=0.1,
+    description=r'$t=$',
+    continuous_update=False,
+    orientation='horizontal',
+    readout=True,
+    readout_format='.1f',
+)
+################################
 widgets.dlink((n_Slider, 'value'), (s_up_Slider, 'max'))
 widgets.dlink((n_Slider, 'value'), (s_down_Slider, 'max'))

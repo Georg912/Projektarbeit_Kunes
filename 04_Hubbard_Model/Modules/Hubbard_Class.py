@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt  # Plotting
 import matplotlib as mpl
 # # from cycler import cycler #used for color cycles in mpl
 from Modules.Widgets import n_Slider, s_up_Slider, s_down_Slider
-from Modules.Widgets import u_Slider, t_Slider
+from Modules.Widgets import u_Slider, t_Slider, u_range_Slider, t_range_Slider
 from Modules.Widgets import basis_index_Slider
 # # from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
 # # from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
@@ -31,13 +31,45 @@ from numba import jit, njit
 
 
 @jit
-def HopTest(x, y, cre, anh):
+def is_single_hopping_process(x, y, cre, anh):
+    """
+    returns `True` if hopping from state `x` at postion `cre` to state `y` at position `anh` is allowed, i.e. if it is a single hopping process which transforms state x into state y
+
+    Parameters
+    ----------
+    x, y : ndarray
+        initial and final state of hopping
+    cre, anh : int
+        index to which/from where to hop
+
+    Returns
+    -------
+
+    allowed : bool
+        `True` if hopping is allowed
+    """
     return (x[cre] * y[anh]) == 1 and (x[anh] + y[cre]) == 0
 
 
 @jit
-def Hop_sign(x, i):
-    return (-1)**np.sum(x[i+1:])
+def hop_sign(state, i):
+    """ 
+    Calculates the sign of creation/annihilation of a particle at site `i`.
+    Due to cleverly choosing the order of the creation operators the sign of a hopping is just total number of particles right to that state. We choose the order such that all spin down operators are left of all the spin up operators and the index of the operators are decreasing, e.g. c3_down c2_down, c3_up c1_down. Further all states are numbered from the lowest spin down to the largest spin up state.
+
+    Parameters
+    ----------
+    state : ndarray (1, 2n)
+        One state of the system.
+    i : int
+        the index at which the creation/annihilation operator is applied.
+
+    Returns
+    -------
+    sign : int
+        sign of the hopping
+    """
+    return (-1)**np.sum(state[i+1:])
 
 
 @njit(fastmath=True, parallel=True)
@@ -47,8 +79,20 @@ def eucl_naive(A, B, ii, jj):
 
     for i in nb.prange(A.shape[0]):
         for j in range(B.shape[0]):
-            C[i, j] = 4*Hop_sign(A[i, :], ii) * Hop_sign(B[j, :],
-                                                         jj) if HopTest(A[i, :], B[j, :], ii, jj) else 1
+            C[i, j] = 4*hop_sign(A[i, :], ii) * hop_sign(B[j, :],
+                                                         jj) if HopTest_H(A[i, :], B[j, :], ii, jj) else 1
+    return C
+
+
+@njit(fastmath=True, parallel=True)
+def eucl_naive_S(A, B, ii, jj):
+    assert A.shape[1] == B.shape[1]
+    C = np.empty((A.shape[0], B.shape[0]), A.dtype)
+
+    for i in nb.prange(A.shape[0]):
+        for j in range(B.shape[0]):
+            C[i, j] = 4*hop_sign(A[i, :], ii) * hop_sign(B[j, :],
+                                                         jj) if HopTest_Sx(A[i, :], B[j, :], ii, jj) else 1
     return C
 
 
@@ -72,13 +116,15 @@ class Hubbard:
 
         self.basis = self.Construct_Basis()
         self.basis_index = basis_index_Slider
-        self.basis_index.max = self.basis.shape[0]
+        self.basis_index.max = self.basis.shape[0] - 1
         self.hoppings = self.Allowed_Hoppings()
 
         self.Reset_H()
 
         self.u = u_Slider
         self.t = t_Slider
+        self.u_range = u_range_Slider
+        self.t_range = t_range_Slider
 
         self.eig_t = None
 
@@ -155,33 +201,34 @@ class Hubbard:
         # Combine up and down states
         return np.concatenate((up_repeated, down_repeated), axis=1)
 
-    def up(self):
-        return self.basis[:, : self.n.value]
+    # def up(self):
+    #     return self.basis[:, : self.n.value]
 
-    def down(self):
-        return self.basis[:, self.n.value:]
+    # def down(self):
+    #     return self.basis[:, self.n.value:]
 
-    def nn(self):
-        return np.sum(self.up() * self.down(), axis=1)
+    # def nn(self):
+    #     return np.sum(self.up() * self.down(), axis=1)
 
-    def diag(self, i):
-        return self.basis[:, i] * self.basis[:, self.n.value + i]
+    # def diag(self, i):
+    #     return self.basis[:, i] * self.basis[:, self.n.value + i]
 
-    def Double(self, i):
-        return np.diag(self.diag(i))
+    # def Double(self, i):
+    #     return np.diag(self.diag(i))
 
-    def DoubleSiteAvg(self):
-        return np.diag(self.nn() / self.n.value)
-        # np.mean(sup(basis) * down(basis), axis=1))
+    # def DoubleSiteAvg(self):
+    #     return np.diag(self.nn() / self.n.value)
+    #     # np.mean(sup(basis) * down(basis), axis=1))
 
-    def OpSz(self, i):
-        return np.diag((self.up() - self.down())[:, i])
+    # def OpSz(self, i):
+    #     return np.diag((self.up() - self.down())[:, i])
 
-    def OpSzSz(self, i, j):
-        return self.OpSz(i) @ self.OpSz(j)
+    # def OpSzSz(self, i, j):
+    #     return self.OpSz(i) @ self.OpSz(j)
 
     @jit(forceobj=True)  # otherwise error message
     def Allowed_Hoppings(self):
+        # TODO rename and make simpler
         _n = self.n.value
         r1 = np.arange(0, _n)
         r2 = np.arange(1, _n+1) % _n
@@ -192,16 +239,18 @@ class Hubbard:
         down_counter_clockwise = up_counter_clockwise + _n
 
         if (_n == 2):  # clockwise and counterclockwise are the same
-            hoppings = np.vstack((up_clockwise, down_clockwise))
+            return np.vstack((up_clockwise, down_clockwise))
         else:
-            hoppings = np.vstack(
+            return np.vstack(
                 (up_clockwise, up_counter_clockwise, down_clockwise, down_counter_clockwise))
 
-        return hoppings
+    def Allowed_Hoppings_Sx(self):
+        _n = self.n.value
+        return np.array(np.meshgrid(np.arange(0, _n), np.arange(_n, 2*_n))).T.reshape(-1, 2)
 
     def test(self):
         with self.out:
-            print(HopTest(self.basis[0, :], self.basis[1, :], 0, 1))
+            print(HopTest_H(self.basis[0, :], self.basis[1, :], 0, 1))
 
     # @jit(forceobj=True, cache=True)
     def Calc_Ht(self):
@@ -216,6 +265,18 @@ class Hubbard:
         self._Ht = a * b
         return self._Ht
 
+    def Calc_Sx(self):
+        _base = self.basis
+        a = sp.cdist(_base, _base, metric="cityblock")
+        a = np.where(a == 2, 1, 0)
+
+        b = np.prod(np.array([eucl_naive_S(_base, _base, i, j)
+                              for i, j in self.Allowed_Hoppings_Sx()]), axis=0)
+        b = np.where(b > 1, 1, np.where(b < -1, -1, 0))
+
+        S = a * b
+        return S / 2.
+
     def Calc_Hu(self):
         self._Hu = np.diag(self.nn())
         return self._Hu
@@ -226,7 +287,7 @@ class Hubbard:
 
     def Show_H(self, u, t, **kwargs):
         """
-        Method to print total Hamiltonian H = u*Hu + t*Ht
+        Method to print total Hamiltonian H = u*Hu + t*Ht and the dimension of H
 
         Parameters
         ----------
@@ -244,6 +305,8 @@ class Hubbard:
         **Kwargs : Widgets
             used to add sliders and other widgets to the displayed output
         """
+        dimension = self.basis_index.max + 1
+        print(f"Dimension of H = {dimension} x {dimension}")
         print(f"H = \n{self.Calc_H(u,t)}")
 
     def Reset_H(self):
@@ -268,7 +331,7 @@ class Hubbard:
         return self._Ht
 
     def Calc_Eigvals_u(self, steps=10):
-        u_array = np.linspace(self.u.min, self.u.max, num=100)
+        u_array = np.linspace(self.u_range.min, self.u_range.max, num=100)
         vals = [np.linalg.eigvalsh(self.Calc_H(u, 1)) for u in u_array]
         self.eig_u = np.array(vals)
         self.u_array = u_array
@@ -294,18 +357,18 @@ class Hubbard:
         plt.xlabel(r"todo $u$")
         plt.ylabel(r"Eigenvalue(s)")
         plt.grid()
-        _u = self.u_array[self.u_array <= self.u.value[1]]
-        _u = _u[_u >= self.u.value[0]]
+        _u = self.u_array[self.u_array <= self.u_range.value[1]]
+        _u = _u[_u >= self.u_range.value[0]]
 
-        index_u_upper = np.where(self.u_array <= self.u.value[1], 1, 0)
-        index_u_lower = np.where(self.u_array >= self.u.value[0], 1, 0)
+        index_u_upper = np.where(self.u_array <= self.u_range.value[1], 1, 0)
+        index_u_lower = np.where(self.u_array >= self.u_range.value[0], 1, 0)
 
         _eig_u = self.eig_u[np.argwhere(
             (index_u_lower * index_u_upper) >= 1)].reshape(_u.size, -1)
         axes = plt.plot(_u, _eig_u, ".-", c="orange")
 
         n_bins = self.Get_Bin_Number_u()
-        max_eigvals = np.linalg.eigvalsh(self.Calc_H(self.u.max, 1))
+        max_eigvals = np.linalg.eigvalsh(self.Calc_H(self.u_range.max, 1))
         bins = np.histogram(max_eigvals, bins=n_bins)[1]
         digs = np.digitize(max_eigvals, bins)
         digs[-1] -= 1
@@ -337,7 +400,7 @@ class Hubbard:
         axes = plt.plot(t_array, eigvals, ".-", c="orange")
 
         n_bins = self.Get_Bin_Number_u()
-        max_eigvals = np.linalg.eigvalsh(self.Calc_H(self.u.max, 1))
+        max_eigvals = np.linalg.eigvalsh(self.Calc_H(self.u_range.max, 1))
         bins = np.histogram(max_eigvals, bins=n_bins)[1]
         digs = np.digitize(max_eigvals, bins)
         digs[-1] -= 1
