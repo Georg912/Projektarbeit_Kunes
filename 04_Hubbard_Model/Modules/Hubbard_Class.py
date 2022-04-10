@@ -15,6 +15,7 @@ import matplotlib as mpl
 from Modules.Widgets import n_Slider, s_up_Slider, s_down_Slider
 from Modules.Widgets import u_Slider, t_Slider, u_range_Slider, t_range_Slider
 from Modules.Widgets import basis_index_Slider
+from Modules.Cache_Decorator import Cach  # used for caching functions
 # # from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
 # # from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
 # # from Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText
@@ -28,12 +29,17 @@ from numba import jit, njit
 #     #write function to store hopping matrices and load them
 #     #clean class
 #     #document module
+#     # implement sparse matrices
+#     # implement faster calcualtion of operator matrices
+import functools
 
 
 @jit
 def is_single_hopping_process(x, y, cre, anh):
     """
-    returns `True` if hopping from state `x` at postion `cre` to state `y` at position `anh` is allowed, i.e. if it is a single hopping process which transforms state x into state y
+    returns `True` if hopping from state `x` at postion `cre` to state `y` at position `anh` is allowed, i.e. if it is a single hopping process which transforms state x into state y.
+
+    Keep in mind that this does **not** check, if the spin is conserved, i.e. also hopping from a spin up side 0 <= cre < n to a spin down site n <= anh < 2n is allowed.
 
     Parameters
     ----------
@@ -53,7 +59,7 @@ def is_single_hopping_process(x, y, cre, anh):
 
 @jit
 def hop_sign(state, i):
-    """ 
+    """
     Calculates the sign of creation/annihilation of a particle at site `i`.
     Due to cleverly choosing the order of the creation operators the sign of a hopping is just total number of particles right to that state. We choose the order such that all spin down operators are left of all the spin up operators and the index of the operators are decreasing, e.g. c3_down c2_down, c3_up c1_down. Further all states are numbered from the lowest spin down to the largest spin up state.
 
@@ -70,30 +76,6 @@ def hop_sign(state, i):
         sign of the hopping
     """
     return (-1)**np.sum(state[i+1:])
-
-
-@njit(fastmath=True, parallel=True)
-def eucl_naive(A, B, ii, jj):
-    assert A.shape[1] == B.shape[1]
-    C = np.empty((A.shape[0], B.shape[0]), A.dtype)
-
-    for i in nb.prange(A.shape[0]):
-        for j in range(B.shape[0]):
-            C[i, j] = 4*hop_sign(A[i, :], ii) * hop_sign(B[j, :],
-                                                         jj) if HopTest_H(A[i, :], B[j, :], ii, jj) else 1
-    return C
-
-
-@njit(fastmath=True, parallel=True)
-def eucl_naive_S(A, B, ii, jj):
-    assert A.shape[1] == B.shape[1]
-    C = np.empty((A.shape[0], B.shape[0]), A.dtype)
-
-    for i in nb.prange(A.shape[0]):
-        for j in range(B.shape[0]):
-            C[i, j] = 4*hop_sign(A[i, :], ii) * hop_sign(B[j, :],
-                                                         jj) if HopTest_Sx(A[i, :], B[j, :], ii, jj) else 1
-    return C
 
 
 class Hubbard:
@@ -201,14 +183,38 @@ class Hubbard:
         # Combine up and down states
         return np.concatenate((up_repeated, down_repeated), axis=1)
 
-    # def up(self):
-    #     return self.basis[:, : self.n.value]
+    def up(self):
+        """
+        Return all possible spin up states.
 
-    # def down(self):
-    #     return self.basis[:, self.n.value:]
+        Returns
+        -------
+        basis : ndarray (m, n)
+            array of spin up basis states
+        """
+        return self.basis[:, : self.n.value]
 
-    # def nn(self):
-    #     return np.sum(self.up() * self.down(), axis=1)
+    def down(self):
+        """
+        Return all possible spin down states.
+
+        Returns
+        -------
+        basis : ndarray (m, n)
+                        array of spin down basis states
+        """
+        return self.basis[:, self.n.value:]
+
+    @Cach
+    def Op_n(self):
+        """
+        Return the occupation number operator `n`, which is diagonal in the occupation number basis
+
+        Returns
+        -------
+        n : ndarray (m)
+        """
+        return np.diag(np.sum(self.up() * self.down(), axis=1))
 
     # def diag(self, i):
     #     return self.basis[:, i] * self.basis[:, self.n.value + i]
@@ -248,42 +254,42 @@ class Hubbard:
         _n = self.n.value
         return np.array(np.meshgrid(np.arange(0, _n), np.arange(_n, 2*_n))).T.reshape(-1, 2)
 
-    def test(self):
-        with self.out:
-            print(HopTest_H(self.basis[0, :], self.basis[1, :], 0, 1))
+    @staticmethod
+    @njit(fastmath=True, parallel=True)
+    def eucl_naive(A, B, ii, jj):
+        assert A.shape[1] == B.shape[1]
+        C = np.zeros((A.shape[0], B.shape[0]), A.dtype)
 
-    # @jit(forceobj=True, cache=True)
+        for i in nb.prange(A.shape[0]):
+            for j in range(B.shape[0]):
+                if is_single_hopping_process(A[i, :], B[j, :], ii, jj):
+                    C[i, j] = hop_sign(A[i, :], ii) * hop_sign(B[j, :], jj)
+        return C
+
+    @jit(forceobj=True, cache=True)
     def Calc_Ht(self):
         _base = self.basis
         a = sp.cdist(_base, _base, metric="cityblock")
         a = np.where(a == 2, 1, 0)
 
-        b = np.prod(np.array([eucl_naive(_base, _base, i, j)
-                              for i, j in self.hoppings]), axis=0)
-        b = np.where(b > 1, 1, np.where(b < -1, -1, 0))
+        b = np.sum(np.array([self.eucl_naive(_base, _base, i, j)
+                             for i, j in self.hoppings]), axis=0)
+        b = np.where(b >= 1, 1, np.where(b <= -1, -1, 0))
 
         self._Ht = a * b
         return self._Ht
 
-    def Calc_Sx(self):
-        _base = self.basis
-        a = sp.cdist(_base, _base, metric="cityblock")
-        a = np.where(a == 2, 1, 0)
-
-        b = np.prod(np.array([eucl_naive_S(_base, _base, i, j)
-                              for i, j in self.Allowed_Hoppings_Sx()]), axis=0)
-        b = np.where(b > 1, 1, np.where(b < -1, -1, 0))
-
-        S = a * b
-        return S / 2.
-
     def Calc_Hu(self):
-        self._Hu = np.diag(self.nn())
+        self._Hu = self.Op_n
         return self._Hu
 
     def Calc_H(self, u, t):
         self._H = t * self.Ht + u * self.Hu
         return self._H
+
+    def test(self, u, t, **kwargs):
+        print(f"{t * self.Ht + u * self.Op_n}")
+        return t * self.Ht + u * self.Op_n
 
     def Show_H(self, u, t, **kwargs):
         """
@@ -315,6 +321,10 @@ class Hubbard:
         self._Ht = None
         self.eig_u = None
         self.eig_t = None
+        try:
+            del self.Op_n
+        except:
+            pass
 
     @property
     def Hu(self):
