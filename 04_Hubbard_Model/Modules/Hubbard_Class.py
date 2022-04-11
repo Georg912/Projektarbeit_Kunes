@@ -104,7 +104,7 @@ class Hubbard:
         self.basis_index = basis_index_Slider
         self.basis_index.max = self.basis.shape[0] - 1
 
-        self.hoppings = self.Allowed_Hoppings()
+        self.hoppings = self.Allowed_Hoppings_H()
 
         self.Reset_H()
 
@@ -114,6 +114,36 @@ class Hubbard:
         self.t_range = t_range_Slider
 
         self.eig_t = None
+
+    def Construct_Basis(self):
+        """
+        Return all possible m := nCr(n, s_up) * nCr(n, s_down) basis states for specific values of `n`, `s_up` and `s_down` by permuting one specific up an down state.
+
+        Returns
+        -------
+        basis : ndarray (m, 2*n)
+            array of basis states
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+
+        up_state = np.concatenate((np.ones(_s_up), np.zeros(_n - _s_up)))
+        down_state = np.concatenate(
+            (np.ones(_s_down), np.zeros(_n - _s_down)))
+
+        all_up_states = np.array(tuple(distinct_permutations(up_state)))
+        all_down_states = np.array(
+            tuple(distinct_permutations(down_state)))
+
+        # reshape and repeat or tile to get all possible combinations:
+        up_repeated = np.repeat(
+            all_up_states, all_down_states.shape[0], axis=0)
+        down_repeated = np.tile(
+            all_down_states, (all_up_states.shape[0], 1))
+
+        # Combine up and down states
+        return np.concatenate((up_repeated, down_repeated), axis=1)
 
     def show_basis(self, index, **kwargs):
         """
@@ -147,7 +177,7 @@ class Hubbard:
     def on_change_n(self, change):
         self.basis = self.Construct_Basis()
         self.basis_index.max = self.basis.shape[0] - 1
-        self.hoppings = self.Allowed_Hoppings()
+        self.hoppings = self.Allowed_Hoppings_H()
         self.Reset_H()
 
     def on_change_s_up(self, change):
@@ -165,36 +195,6 @@ class Hubbard:
             self.basis = self.Construct_Basis()
             self.basis_index.max = self.basis.shape[0] - 1
             self.Reset_H()
-
-    def Construct_Basis(self):
-        """
-        Return all possible m := nCr(n, s_up) * nCr(n, s_down) basis states for specific values of `n`, `s_up` and `s_down` by permuting one specific up an down state.
-
-        Returns
-        -------
-        basis : ndarray (m, 2*n)
-            array of basis states
-        """
-        _s_up = self.s_up.value
-        _s_down = self.s_down.value
-        _n = self.n.value
-
-        up_state = np.concatenate((np.ones(_s_up), np.zeros(_n - _s_up)))
-        down_state = np.concatenate(
-            (np.ones(_s_down), np.zeros(_n - _s_down)))
-
-        all_up_states = np.array(tuple(distinct_permutations(up_state)))
-        all_down_states = np.array(
-            tuple(distinct_permutations(down_state)))
-
-        # reshape and repeat or tile to get all possible combinations:
-        up_repeated = np.repeat(
-            all_up_states, all_down_states.shape[0], axis=0)
-        down_repeated = np.tile(
-            all_down_states, (all_up_states.shape[0], 1))
-
-        # Combine up and down states
-        return np.concatenate((up_repeated, down_repeated), axis=1)
 
     def up(self):
         """
@@ -246,8 +246,15 @@ class Hubbard:
     #     return self.OpSz(i) @ self.OpSz(j)
 
     @jit(forceobj=True)  # otherwise error message
-    def Allowed_Hoppings(self):
-        # TODO rename and make simpler
+    def Allowed_Hoppings_H(self):
+        """
+        Calculates all allowed hoppings in the Hamiltonian H from position `r1` to position `r2` for a given `n`.
+
+        Returns
+        -------
+        hoppings : ndarray (4n, 2)
+            Array of allowed hopping pairs
+        """
         _n = self.n.value
         r1 = np.arange(0, _n)
         r2 = np.arange(1, _n+1) % _n
@@ -262,10 +269,6 @@ class Hubbard:
         else:
             return np.vstack(
                 (up_clockwise, up_counter_clockwise, down_clockwise, down_counter_clockwise))
-
-    def Allowed_Hoppings_Sx(self):
-        _n = self.n.value
-        return np.array(np.meshgrid(np.arange(0, _n), np.arange(_n, 2*_n))).T.reshape(-1, 2)
 
     @staticmethod
     @njit(fastmath=True, parallel=True)
