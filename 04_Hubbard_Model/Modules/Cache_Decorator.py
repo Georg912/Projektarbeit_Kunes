@@ -23,3 +23,6 @@ class CachedAttribute(object):
 
 def Cach(func):
     return functools.wraps(func)(CachedAttribute(func))
+
+
+# TODO: rename Cach into Cache
