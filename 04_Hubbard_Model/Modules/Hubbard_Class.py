@@ -270,9 +270,47 @@ class Hubbard:
             return np.vstack(
                 (up_clockwise, up_counter_clockwise, down_clockwise, down_counter_clockwise))
 
+    @jit(forceobj=True)  # otherwise error message
+    def Allowed_Hoppings_Sx(self):
+        """
+        Calculates all allowed hoppings in the Spin operator S_x from position `r1` to position `r2` for a given `n`.
+
+        Returns
+        -------
+        hoppings : ndarray (4n, 2)
+            Array of allowed hopping pairs
+        """
+        _n = self.n.value
+        r1 = np.arange(0, _n)
+        r2 = r1 + _n
+
+        clockwise = np.stack((r1, r2)).T
+        counter_clockwise = np.fliplr(clockwise)
+
+        return np.vstack((clockwise, counter_clockwise))
+
     @staticmethod
     @njit(fastmath=True, parallel=True)
-    def eucl_naive(A, B, ii, jj):
+    def Sign_Matrix(A, B, ii, jj):
+        """ 
+        Calculates the sign matrix for a hopping from site ii to site jj from all possible states in A to all possible states in B.
+
+        Parameters
+        ----------
+        A : ndarray (m, n)
+            Basis to hop into
+        B : ndarray (m, n)
+            Basis to hop out of
+        ii : int
+            index of site to hop into
+        jj : int
+            index of site to hop out of
+
+        Returns
+        -------
+        C : ndarray (m, m)
+            Sign matrix of the hopping
+        """
         assert A.shape[1] == B.shape[1]
         C = np.zeros((A.shape[0], B.shape[0]), A.dtype)
 
@@ -288,7 +326,7 @@ class Hubbard:
         a = sp.cdist(_base, _base, metric="cityblock")
         a = np.where(a == 2, 1, 0)
 
-        b = np.sum(np.array([self.eucl_naive(_base, _base, i, j)
+        b = np.sum(np.array([self.Sign_Matrix(_base, _base, i, j)
                              for i, j in self.hoppings]), axis=0)
         b = np.where(b >= 1, 1, np.where(b <= -1, -1, 0))
 
