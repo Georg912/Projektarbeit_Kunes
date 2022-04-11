@@ -346,11 +346,21 @@ class Hubbard:
 		Hu : ndarray (m, m)
 			on-site Interaction Hamiltonian
 		"""
-        return self.Op_n
+		return self.Op_n
 
-    def H(self, u, t):
-        return t * self.Ht + u * self.Hu
+	def H(self, u, t):
+		"""
+		Compute the system's total Hamiltonian H = u*Hu + t*Ht for given prefactors `u` and `t`.
 
+		Parameters
+		----------
+		u : float
+			on-site interaction strength
+		t : float
+			hopping strength
+		"""
+		return t * self.Ht + u * self.Hu
+    
     def Show_H(self, u, t, **kwargs):
         """
         Method to print total Hamiltonian H = u*Hu + t*Ht and the dimension of H
@@ -376,6 +386,9 @@ class Hubbard:
         print(f"H = \n{self.H(u,t)}")
 
     def Reset_H(self):
+        """ 
+        Method to reset the cached Hamiltonian H.
+        """
         self._H = None
         self._Hu = None
         self._Ht = None
