@@ -292,7 +292,7 @@ class Hubbard:
     @staticmethod
     @njit(fastmath=True, parallel=True)
     def Sign_Matrix(A, B, ii, jj):
-        """ 
+        """
         Calculates the sign matrix for a hopping from site ii to site jj from all possible states in A to all possible states in B.
 
         Parameters
@@ -323,7 +323,7 @@ class Hubbard:
     @Cach
     @jit(forceobj=True, cache=True)
     def Ht(self):
-        """ 
+        """
         Calculates Hopping matrix Ht from the allowed hoppings in the Hamiltonian H. First all allowed nearest neighbor hoppings `NN_hoppings` are calculated, then the total sign matrix `NN_sign` is calculated for each hopping. The resulting Hopping Hamiltonian `Ht` is then the product of `NN_sign` and `NN_hoppings`.
         """
         _base = self.basis
@@ -336,17 +336,20 @@ class Hubbard:
 
         return NN_hoppings * NN_sign
 
-    def Calc_Hu(self):
-        self._Hu = self.Op_n
-        return self._Hu
+    @Cach
+    def Hu(self):
+		"""
+		Return cached on-site interaction Hamiltonian H_u given exactly by the occupation number operator `n`.
 
-    def Calc_H(self, u, t):
-        self._H = t * self.Ht + u * self.Hu
-        return self._H
+		Returns
+		-------
+		Hu : ndarray (m, m)
+			on-site Interaction Hamiltonian
+		"""
+        return self.Op_n
 
-    def test(self, u, t, **kwargs):
-        print(f"{t * self.Ht + u * self.Op_n}")
-        return t * self.Ht + u * self.Op_n
+    def H(self, u, t):
+        return t * self.Ht + u * self.Hu
 
     def Show_H(self, u, t, **kwargs):
         """
@@ -370,7 +373,7 @@ class Hubbard:
         """
         dimension = self.basis_index.max + 1
         print(f"Dimension of H = {dimension} x {dimension}")
-        print(f"H = \n{self.Calc_H(u,t)}")
+        print(f"H = \n{self.H(u,t)}")
 
     def Reset_H(self):
         self._H = None
@@ -381,15 +384,9 @@ class Hubbard:
         try:
             del self.Op_n
             del self.Ht
+            del self.Hu
         except:
             pass
-
-    @property
-    def Hu(self):
-        if self._Hu is None:
-            self._Hu = self.Calc_Hu()
-
-        return self._Hu
 
     def Calc_Eigvals_u(self, steps=10):
         u_array = np.linspace(self.u_range.min, self.u_range.max, num=100)
