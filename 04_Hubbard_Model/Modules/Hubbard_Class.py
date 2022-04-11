@@ -320,18 +320,21 @@ class Hubbard:
                     C[i, j] = hop_sign(A[i, :], ii) * hop_sign(B[j, :], jj)
         return C
 
+    @Cach
     @jit(forceobj=True, cache=True)
-    def Calc_Ht(self):
+    def Ht(self):
+        """ 
+        Calculates Hopping matrix Ht from the allowed hoppings in the Hamiltonian H. First all allowed nearest neighbor hoppings `NN_hoppings` are calculated, then the total sign matrix `NN_sign` is calculated for each hopping. The resulting Hopping Hamiltonian `Ht` is then the product of `NN_sign` and `NN_hoppings`.
+        """
         _base = self.basis
-        a = sp.cdist(_base, _base, metric="cityblock")
-        a = np.where(a == 2, 1, 0)
+        NN_hoppings = sp.cdist(_base, _base, metric="cityblock")
+        NN_hoppings = np.where(NN_hoppings == 2, 1, 0)
 
-        b = np.sum(np.array([self.Sign_Matrix(_base, _base, i, j)
-                             for i, j in self.hoppings]), axis=0)
-        b = np.where(b >= 1, 1, np.where(b <= -1, -1, 0))
+        NN_sign = np.sum(np.array([self.Sign_Matrix(_base, _base, i, j)
+                                   for i, j in self.hoppings]), axis=0)
+        NN_sign = np.where(NN_sign >= 1, 1, np.where(NN_sign <= -1, -1, 0))
 
-        self._Ht = a * b
-        return self._Ht
+        return NN_hoppings * NN_sign
 
     def Calc_Hu(self):
         self._Hu = self.Op_n
@@ -377,6 +380,7 @@ class Hubbard:
         self.eig_t = None
         try:
             del self.Op_n
+            del self.Ht
         except:
             pass
 
@@ -386,13 +390,6 @@ class Hubbard:
             self._Hu = self.Calc_Hu()
 
         return self._Hu
-
-    @property
-    def Ht(self):
-        if self._Ht is None:
-            self._Ht = self.Calc_Ht()
-
-        return self._Ht
 
     def Calc_Eigvals_u(self, steps=10):
         u_array = np.linspace(self.u_range.min, self.u_range.max, num=100)
