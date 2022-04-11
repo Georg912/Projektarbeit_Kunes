@@ -4,6 +4,7 @@
 from more_itertools import distinct_permutations
 
 import scipy.spatial.distance as sp
+import scipy
 import numpy as np
 import ipywidgets as widgets
 import time  # , math, copy
@@ -31,7 +32,6 @@ from numba import jit, njit
 #     #document module
 #     # implement sparse matrices
 #     # implement faster calcualtion of operator matrices
-import functools
 
 
 @jit
@@ -39,7 +39,7 @@ def is_single_hopping_process(x, y, cre, anh):
     """
     returns `True` if hopping from state `x` at postion `cre` to state `y` at position `anh` is allowed, i.e. if it is a single hopping process which transforms state x into state y.
 
-    Keep in mind that this does **not** check, if the spin is conserved, i.e. also hopping from a spin up side 0 <= cre < n to a spin down site n <= anh < 2n is allowed.
+    Keep in mind that this does **not** check, if the spin is conserved, i.e. also hopping from a spin up side (0 <= cre < n) to a spin down site (n <= anh < 2n) is allowed.
 
     Parameters
     ----------
@@ -61,7 +61,7 @@ def is_single_hopping_process(x, y, cre, anh):
 def hop_sign(state, i):
     """
     Calculates the sign of creation/annihilation of a particle at site `i`.
-    Due to cleverly choosing the order of the creation operators the sign of a hopping is just total number of particles right to that state. We choose the order such that all spin down operators are left of all the spin up operators and the index of the operators are decreasing, e.g. c3_down c2_down, c3_up c1_down. Further all states are numbered from the lowest spin down to the largest spin up state.
+    Due to cleverly choosing the order of the creation operators the sign of a hopping is just total number of particles right to that state. We choose the order such that all spin down operators are left of all the spin up operators and the index of the operators are decreasing, e.g. c3_down c2_down, c3_up c1_up. Further all states are numbered from the lowest spin down to the largest spin up state.
 
     Parameters
     ----------
@@ -84,6 +84,8 @@ class Hubbard:
 
         self.out = widgets.Output()
 
+        # Set all site and spin sliders
+        ############################################
         self.n = n_Slider
         self.n.value = n
         self.n.observe(self.on_change_n, names="value")
@@ -96,9 +98,12 @@ class Hubbard:
         self.s_down.value = s_down
         self.s_down.observe(self.on_change_s_down, names="value")
 
+        # Calculate basis states and set index sliders
+        ##############################################
         self.basis = self.Construct_Basis()
         self.basis_index = basis_index_Slider
         self.basis_index.max = self.basis.shape[0] - 1
+
         self.hoppings = self.Allowed_Hoppings()
 
         self.Reset_H()
@@ -128,6 +133,14 @@ class Hubbard:
         **Kwargs : Widgets
             used to add sliders and other widgets to the displayed output
         """
+        _n = self.n.value
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+
+        # check analtical formula equals numeric calculation
+        assert self.basis.shape[0] == scipy.special.comb(_n, _s_up) * scipy.special.comb(_n, _s_down), \
+            "Error: Basis vector count does not match the analytical formula"
+
         print(f"Total number of basis states = {self.basis.shape[0]}")
         print(f"Basis state {index} = {self.basis[index]}")
 
