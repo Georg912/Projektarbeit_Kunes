@@ -1,6 +1,7 @@
 # #Module for arbitrary hopping by user defined hopping and transition matrices
 
 
+from re import A
 from more_itertools import distinct_permutations
 
 import scipy.spatial.distance as sp
@@ -109,14 +110,16 @@ class Hubbard:
 
         self.Reset_H()
 
+        # Set all u and t Sliders
+        ##############################################
         self.u = u_Slider
         self.t = t_Slider
         self.u_range = u_range_Slider
+        self.t_range = t_range_Slider
         self.u_array = np.linspace(self.u_range.min, self.u_range.max, num=int(
             2*self.u_range.max + 1), endpoint=True)
-        self.t_range = t_range_Slider
-
-        self.eig_t = None
+        self.t_array = np.linspace(self.t_range.min, self.t_range.max, num=int(
+            2*self.t_range.max + 1), endpoint=True)
 
     def Construct_Basis(self):
         """
@@ -324,7 +327,7 @@ class Hubbard:
         return C
 
     @Cach
-    @jit(forceobj=True, cache=True)
+    @jit(forceobj=True)  # , cache=True)
     def Ht(self):
         """
         Calculates Hopping matrix Ht from the allowed hoppings in the Hamiltonian H. First all allowed nearest neighbor hoppings `NN_hoppings` are calculated, then the total sign matrix `NN_sign` is calculated for each hopping. The resulting Hopping Hamiltonian `Ht` is then the product of `NN_sign` and `NN_hoppings`.
@@ -392,34 +395,56 @@ class Hubbard:
         """
         Method to reset the cached Hamiltonian H.
         """
-        self._H = None
-        self._Hu = None
-        self._Ht = None
-        self.eig_u = None
-        self.eig_t = None
         try:
             del self.Op_n
+        except:
+            pass
+        try:
             del self.Ht
+        except:
+            pass
+        try:
             del self.Hu
+        except:
+            pass
+        try:
             del self.Eigvals_Hu
+        except:
+            pass
+        try:
+            del self.Eigvals_Ht
         except:
             pass
 
     @Cach
     @jit(forceobj=True, cache=True)
     def Eigvals_Hu(self):
+        """
+        Calculates the eigenvalues of the on-site interaction Hamiltonian Hu for hopping amplitude t = 1.
+
+        Returns
+        -------
+        vals : ndarray (len(u),m)
+                        Eigenvalues of the on-site interaction Hamiltonian
+        """
         vals = [np.linalg.eigvalsh(self.H(u, 1)) for u in self.u_array]
         return np.array(vals)
 
     def Plot_Eigvals_Hu(self, **kwargs):
-        fig = plt.figure(figsize=(10, 6))
-        plt.title(
-            f"Eigenvalues of Hubbard-Ring Hamiltonian H as a function of the on-site interaction strength $U$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s) and {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$")
-        plt.xlabel(r" $U$")
-        plt.ylabel(r"Eigenvalue(s)")
-        plt.grid()
+        """
+        Method to plot the eigenvalues of the on-site interaction Hamiltonian H_u for constant hopping amplitude t=1. Method als plots the number of eigenvalues for the atomic limit as labels for the correspondingly colored curves.
 
-        # find indices of u_array that are within the range u_range_Slider
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+                        figure object to save as image-file
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+
+        # find indices of u_array that are within the range `u_range_Slider``
         u_min = self.u_range.value[0]
         u_max = self.u_range.value[1]
         u = self.u_array
@@ -430,10 +455,18 @@ class Hubbard:
         last_eigvals_u = self.Eigvals_Hu[-1, :]
         sorted_eigval_idx = np.argsort(last_eigvals_u)
         eig_u = self.Eigvals_Hu[u_idx][:, sorted_eigval_idx]
-        axes = plt.plot(u, eig_u, ".-")
+
         uniq = np.unique(np.diag(self.Op_n).astype(int), return_counts=True)
         color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]))
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+
+        fig = plt.figure(figsize=(10, 6))
+        plt.title(
+            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the on-site interaction strength $U$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$")
+        plt.xlabel(r"$U$")
+        plt.ylabel(r"Eigenvalue(s)")
+        plt.grid()
+        axes = plt.plot(u, eig_u, ".-")
 
         for idx, num in enumerate(np.cumsum(uniq[1])):
             axes[num-1].set_label(f"{uniq[1][idx]}")
@@ -443,56 +476,119 @@ class Hubbard:
         # plt.show()
         return fig
 
-    def Calc_Eigvals_t(self, steps=10):
-        t_array = np.linspace(self.t.min, self.t.max, num=steps)
-        vals = [np.linalg.eigvalsh(self.H(10, t)) for t in t_array]
-        self.eig_t = np.array(vals)
-        self.t_array = t_array
+    @Cach
+    @jit(forceobj=True, cache=True)
+    def Eigvals_Ht(self):
+        """
+        Calculates the eigenvalues of the hopping Hamiltonian Ht for on-site interaction U = 10.
 
-        return np.array(vals), t_array
+        Returns
+        -------
+        vals : ndarray (len(u),m)
+                        Eigenvalues of the hopping Hamiltonian
+        """
+        vals = [np.linalg.eigvalsh(self.H(10, t)) for t in self.t_array]
+        return np.array(vals)
 
-    def Plot_Eigvals_t(self, **kwargs):
-        eigvals, t_array = self.Calc_Eigvals_t(kwargs.get("steps", 10))
+    def Plot_Eigvals_Ht(self, **kwargs):
+        """
+        Method to plot the eigenvalues of the hopping Hamiltonian H_t for constant on-site interaction u=10. Method als plots the number of eigenvalues for the atomic limit as labels for the correspondingly colored curves.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+                        figure object to save as image-file
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+        # find indices of t_array that are within the range `t_range_Slider``
+        t_min = self.t_range.value[0]
+        t_max = self.t_range.value[1]
+        t = self.t_array
+
+        t_idx = np.nonzero(np.logical_and(t <= t_max, t >= t_min))
+        t = t[t_idx]
+
+        last_eigvals_t = self.Eigvals_Ht[-1, :]
+        sorted_eigval_idx = np.argsort(last_eigvals_t)
+        eig_t = self.Eigvals_Ht[t_idx][:, sorted_eigval_idx]
+        uniq = np.unique(np.diag(self.Op_n).astype(int), return_counts=True)
+        color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
 
         fig = plt.figure(figsize=(10, 6))
         plt.title(
-            f"Eigenvalues of Hubbard-Ring Hamiltonian H as a function of TODO $u$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s) and {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$")
-        plt.xlabel(r"todo $t$")
+            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the hopping amplitude $t$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and on-site interaction $U=10$")
+        plt.xlabel(r"$t$")
         plt.ylabel(r"Eigenvalue(s)")
         plt.grid()
-        axes = plt.plot(t_array, eigvals, ".-", c="orange")
+        axes = plt.plot(t, eig_t, ".-")
 
-        n_bins = self.Get_Bin_Number_u()
-        max_eigvals = np.linalg.eigvalsh(self.H(self.u_range.max, 1))
-        bins = np.histogram(max_eigvals, bins=n_bins)[1]
-        digs = np.digitize(max_eigvals, bins)
-        digs[-1] -= 1
-        color_list = mpl.cm.get_cmap('tab10')
-        unique = np.unique(digs, return_counts=True)[1]
-        indices = np.cumsum(unique)
+        for idx, num in enumerate(np.cumsum(uniq[1])):
+            axes[num-1].set_label(f"{uniq[1][idx]}")
 
-        count = 0
-        for idx, ax in enumerate(axes):
-            ax.set_color(color_list(digs[idx]))
-            if idx == indices[count]-1:
-                ax.set_label(unique[count])
-                count += 1
         plt.gca().invert_xaxis()
         plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left",
                    ncol=1, title="# of eigenvalues")
-        plt.show()
+        # plt.show()
         return fig
 
-    def Get_Bin_Number_u(self):
-        _n = self.n.value
-        _s_up = self.s_up.value
-        _s_down = self.s_down.value
+    def Plot_Eigvals_H(self, **kwargs):
+        # find indices of t_array that are within the range `t_range_Slider``
+        t_min = self.t_range.value[0]
+        t_max = self.t_range.value[1]
+        t = self.t_array
 
-        if _n == 6 and _s_down == 3 and _s_up == 3:
-            return 4
+        t_idx = np.nonzero(np.logical_and(t <= t_max, t >= t_min))
+        t = t[t_idx]
 
-        if _n == 7:
-            if _s_up == 3 or _s_up == 4:
-                if _s_down == 3 or _s_down == 4:
-                    return 4
-        return 3
+        # find indices of u_array that are within the range `u_range_Slider``
+        u_min = self.u_range.value[0]
+        u_max = self.u_range.value[1]
+        u = self.u_array
+
+        u_idx = np.nonzero(np.logical_and(u <= u_max, u >= u_min))
+        u = u[u_idx]
+
+        eig_t = np.array([np.linalg.eigvalsh(self.H(u_max, t))
+                         for t in self.t_array])
+        eig_u = np.array([np.linalg.eigvalsh(self.H(u, t_max))
+                         for u in self.u_array])
+
+        last_eigvals_t = eig_t[-1, :]
+        sorted_eigval_idx = np.argsort(last_eigvals_t)
+        eig_t = eig_t[t_idx][:, sorted_eigval_idx]
+
+        last_eigvals_u = eig_u[-1, :]
+        sorted_eigval_idx = np.argsort(last_eigvals_u)
+        eig_u = eig_u[u_idx][:, sorted_eigval_idx]
+
+        uniq = np.unique(np.diag(self.Op_n).astype(int), return_counts=True)
+        color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+
+        fig, axes = plt.subplots(ncols=2, sharey=True,
+                                 figsize=(15, 8))
+        fig.subplots_adjust(wspace=0.02)
+
+        axes[0].set_xlabel(r"$U$")
+        axes[0].set_ylabel(r"Eigenvalue(s)")
+        axes[1].set_xlabel(r"$t$")
+        axes[0].grid()
+        axes[1].grid()
+
+        axes[0].plot(u, eig_u, ".-")
+        ax = axes[1].plot(t, eig_t, ".-")
+
+        for idx, num in enumerate(np.cumsum(uniq[1])):
+            ax[num-1].set_label(f"{uniq[1][idx]}")
+
+        fig.suptitle(
+            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ for $n={self.n.value}$ sites with {self.s_up.value} spin up electron(s) and {self.s_down.value} spin down electron(s). \n On the left as a function of $U$ for constant $t={t_max}$ and on the right as a function of $t$ for constant $U={u_max}$")
+        fig.gca().invert_xaxis()
+        fig.legend(bbox_to_anchor=(0.9, 0.9), loc="upper left",
+                   ncol=1, title="# of eigenvalues")
+        # fig.show()
+        return fig
