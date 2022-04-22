@@ -203,6 +203,7 @@ class Hubbard:
             self.basis_index.max = self.basis.shape[0] - 1
             self.Reset_H()
 
+    @Cach
     def up(self):
         """
         Return all possible spin up states.
@@ -214,6 +215,7 @@ class Hubbard:
         """
         return self.basis[:, : self.n.value]
 
+    @Cach
     def down(self):
         """
         Return all possible spin down states.
@@ -226,15 +228,15 @@ class Hubbard:
         return self.basis[:, self.n.value:]
 
     @Cach
-    def Op_n(self):
+    def Op_nn(self):
         """
-        Return the occupation number operator `n`, which is diagonal in the occupation number basis
+        Return the double occupation number operator `nn`, which is diagonal in the occupation number basis
 
         Returns
         -------
-        n : ndarray (m)
+        nn : ndarray (m, m)
         """
-        return np.diag(np.sum(self.up() * self.down(), axis=1))
+        return np.diag(np.sum(self.up * self.down, axis=1))
 
     @jit(forceobj=True)  # otherwise error message
     def Allowed_Hoppings_H(self):
@@ -337,7 +339,7 @@ class Hubbard:
         Hu : ndarray (m, m)
         on-site Interaction Hamiltonian
         """
-        return self.Op_n
+        return self.Op_nn
 
     def H(self, u, t):
         """
@@ -380,34 +382,10 @@ class Hubbard:
         """
         Method to reset the cached Hamiltonian H.
         """
-        try:
-            del self.Op_n
-        except:
-            pass
-        try:
-            del self.Ht
-        except:
-            pass
-        try:
-            del self.Hu
-        except:
-            pass
-        try:
-            del self.Eigvals_Hu
-        except:
-            pass
-        try:
-            del self.Eigvals_Ht
-        except:
-            pass
-        try:
-            del self.GS
-        except:
-            pass
-        try:
-            del self.DoubleSiteAvg
-        except:
-            pass
+        cached_properties = ["Op_nn", "Ht", "Hu",
+                             "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "Op_n_up", "Op_n_down"]
+        for prop in cached_properties:
+            self.__dict__.pop(prop, None)
 
     @Cach
     @jit(forceobj=True, cache=True)
@@ -449,7 +427,7 @@ class Hubbard:
         sorted_eigval_idx = np.argsort(last_eigvals_u)
         eig_u = self.Eigvals_Hu[u_idx][:, sorted_eigval_idx]
 
-        uniq = np.unique(np.diag(self.Op_n).astype(int), return_counts=True)
+        uniq = np.unique(np.diag(self.Op_nn).astype(int), return_counts=True)
         color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]))
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
 
@@ -507,7 +485,7 @@ class Hubbard:
         last_eigvals_t = self.Eigvals_Ht[-1, :]
         sorted_eigval_idx = np.argsort(last_eigvals_t)
         eig_t = self.Eigvals_Ht[t_idx][:, sorted_eigval_idx]
-        uniq = np.unique(np.diag(self.Op_n).astype(int), return_counts=True)
+        uniq = np.unique(np.diag(self.Op_nn).astype(int), return_counts=True)
         color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]))
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
 
@@ -570,7 +548,7 @@ class Hubbard:
         sorted_eigval_idx = np.argsort(last_eigvals_u)
         eig_u = eig_u[u_idx][:, sorted_eigval_idx]
 
-        uniq = np.unique(np.diag(self.Op_n).astype(int), return_counts=True)
+        uniq = np.unique(np.diag(self.Op_nn).astype(int), return_counts=True)
         color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]))
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
 
@@ -619,15 +597,15 @@ class Hubbard:
         return np.diag(self.diag(i))
 
     @Cach
-    def DoubleSiteAvg(self):
-        return self.Op_n / self.n.value
-        # np.mean(sup(basis) * down(basis), axis=1))
+    def Op_nn_mean(self):
+        """
+        Return the average double occuption number operator `nn / n` which is diagonal occupation number basis
 
-    # def OpSz(self, i):
-    #     return np.diag((self.up() - self.down())[:, i])
-
-    # def OpSzSz(self, i, j):
-    #     return self.OpSz(i) @ self.OpSz(j)
+        Return
+        ------
+        nn_mean : ndarray (m, m)
+        """
+        return self.Op_nn / self.n.value
 
     def Exp_Val_0(self, Op):
         """ 
@@ -636,14 +614,37 @@ class Hubbard:
         Parameters
         ----------
         Op : ndarray (m, m)
-                        Matrix representation (in occupation number basis) of the operator Op.
+            Matrix representation (in occupation number basis) of the operator Op.
 
         Returns
         -------
-        exp_val : ndaray (len(u), 1)
+        exp_val : ndaray (len(u),)
+            Expectation value of the operator Op for u in [u_min, u_max]
         """
+        # Calculates (vectorized) vector-wise matrix vector sandwich EV_i = vec_i.T * Op * vec_i
         return np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
 
+    @Cach
+    def Op_n_up(self, i):
+        """ 
+        Calculate the spin-up occupation number operator `n_up` for site i.
+
+        Returns
+        -------
+        n_up : ndarray (m, m)
+        """
+        return np.diag(self.up[:, i])
+
+    @Cach
+    def Op_n_down(self, i):
+        """ 
+        Calculate the spin-down occupation number operator `n_down` for site i.
+
+        Returns
+        -------
+        n_down : ndarray (m, m)
+        """
+        return np.diag(self.down[:, i])
     # def Eigvecs_Hu(self):
     #     # H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
     #     H = np.array([self.H(u, 1) for u in self.u_array])
@@ -656,3 +657,9 @@ class Hubbard:
     #     # eigvecs = eigvecs[:, ind, :]  # second axis !!
     #     return eigvecs[..., 0]
     #     # return H
+
+     # def OpSz(self, i):
+    #     return np.diag((self.up - self.down)[:, i])
+
+    # def OpSzSz(self, i, j):
+    #     return self.OpSz(i) @ self.OpSz(j)
