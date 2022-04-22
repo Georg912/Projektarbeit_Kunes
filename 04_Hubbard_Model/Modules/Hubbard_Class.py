@@ -27,6 +27,7 @@ from Modules.Cache_Decorator import Cach  # used for caching functions
 # # mpl.rcParams['text.usetex'] = True
 import numba as nb
 from numba import jit, njit
+import scipy.sparse.linalg as splin
 
 # #possible TODOS:
 #     #write function to store hopping matrices and load them
@@ -235,22 +236,6 @@ class Hubbard:
         """
         return np.diag(np.sum(self.up() * self.down(), axis=1))
 
-    # def diag(self, i):
-    #     return self.basis[:, i] * self.basis[:, self.n.value + i]
-
-    # def Double(self, i):
-    #     return np.diag(self.diag(i))
-
-    # def DoubleSiteAvg(self):
-    #     return np.diag(self.nn() / self.n.value)
-    #     # np.mean(sup(basis) * down(basis), axis=1))
-
-    # def OpSz(self, i):
-    #     return np.diag((self.up() - self.down())[:, i])
-
-    # def OpSzSz(self, i, j):
-    #     return self.OpSz(i) @ self.OpSz(j)
-
     @jit(forceobj=True)  # otherwise error message
     def Allowed_Hoppings_H(self):
         """
@@ -365,7 +350,7 @@ class Hubbard:
         t : float
                 hopping strength
         """
-        return t * self.Ht + u * self.Hu
+        return t * self.Ht + u * self.Hu  # + np.eye(self.Hu.shape[0])*20
 
     def Show_H(self, u, t, **kwargs):
         """
@@ -413,6 +398,14 @@ class Hubbard:
             pass
         try:
             del self.Eigvals_Ht
+        except:
+            pass
+        try:
+            del self.GS
+        except:
+            pass
+        try:
+            del self.DoubleSiteAvg
         except:
             pass
 
@@ -536,6 +529,18 @@ class Hubbard:
         return fig
 
     def Plot_Eigvals_H(self, **kwargs):
+        """
+        Method to plot the eigenvalues of the Hamiltonian H(u,t) . Method als plots the number of eigenvalues for the atomic limit as labels for the correspondingly colored curves.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+                        figure object to save as image-file
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
         # find indices of t_array that are within the range `t_range_Slider``
         t_min = self.t_range.value[0]
         t_max = self.t_range.value[1]
@@ -592,3 +597,62 @@ class Hubbard:
                    ncol=1, title="# of eigenvalues")
         # fig.show()
         return fig
+
+    @Cach
+    def GS(self):
+        """ 
+        Calculate the ground state eigevector of the Hamiltonian H(u,t) for u in [u_min, u_max] and t=1. Methods uses sparse matrices to speed up the computation of the eigenvector associtated with the smallest (algebraic) eigenvalue of H(u,t).
+
+        Returns
+        -------
+        eig_vec : ndarray (len(u), m)
+        """
+        _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
+        eig_vecs = np.array([splin.eigsh(h, k=1, which="SA")[1].ravel()
+                             for h in _H])
+        return eig_vecs
+
+    def diag(self, i):
+        return self.basis[:, i] * self.basis[:, self.n.value + i]
+
+    def Double(self, i):
+        return np.diag(self.diag(i))
+
+    @Cach
+    def DoubleSiteAvg(self):
+        return self.Op_n / self.n.value
+        # np.mean(sup(basis) * down(basis), axis=1))
+
+    # def OpSz(self, i):
+    #     return np.diag((self.up() - self.down())[:, i])
+
+    # def OpSzSz(self, i, j):
+    #     return self.OpSz(i) @ self.OpSz(j)
+
+    def Exp_Val_0(self, Op):
+        """ 
+        Calculate the ground state expectation value <GS|Op|GS> of the operator Op for u in [u_min, u_max].
+
+        Parameters
+        ----------
+        Op : ndarray (m, m)
+                        Matrix representation (in occupation number basis) of the operator Op.
+
+        Returns
+        -------
+        exp_val : ndaray (len(u), 1)
+        """
+        return np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
+
+    # def Eigvecs_Hu(self):
+    #     # H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
+    #     H = np.array([self.H(u, 1) for u in self.u_array])
+    #     eigvals, eigvecs = np.linalg.eigh(H)
+    #     # idx = np.argsort(eigvals, axis=1)
+    #     # print(eigvals.shape, eigvecs.shape)
+    #     # print(np.round(eigvals), "\n", np.round(eigvecs))
+    #     # eigvals = np.take_along_axis(eigvals, idx, axis=1)
+    #     # eigvecs = np.take_along_axis(eigvecs, idx[..., None], axis=1)
+    #     # eigvecs = eigvecs[:, ind, :]  # second axis !!
+    #     return eigvecs[..., 0]
+    #     # return H
