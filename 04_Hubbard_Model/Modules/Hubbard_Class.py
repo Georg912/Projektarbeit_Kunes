@@ -112,6 +112,7 @@ class Hubbard:
         self.Reset_H()
 
         # Set all u and t Sliders
+        # TODO: check how to adapt range of u and t sliders
         ##############################################
         self.u = u_Slider
         self.t = t_Slider
@@ -578,7 +579,7 @@ class Hubbard:
 
     @Cach
     def GS(self):
-        """ 
+        """
         Calculate the ground state eigevector of the Hamiltonian H(u,t) for u in [u_min, u_max] and t=1. Methods uses sparse matrices to speed up the computation of the eigenvector associtated with the smallest (algebraic) eigenvalue of H(u,t).
 
         Returns
@@ -608,7 +609,7 @@ class Hubbard:
         return self.Op_nn / self.n.value
 
     def Exp_Val_0(self, Op):
-        """ 
+        """
         Calculate the ground state expectation value <GS|Op|GS> of the operator Op for u in [u_min, u_max].
 
         Parameters
@@ -624,9 +625,8 @@ class Hubbard:
         # Calculates (vectorized) vector-wise matrix vector sandwich EV_i = vec_i.T * Op * vec_i
         return np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
 
-    @Cach
     def Op_n_up(self, i):
-        """ 
+        """
         Calculate the spin-up occupation number operator `n_up` for site i.
 
         Returns
@@ -635,9 +635,8 @@ class Hubbard:
         """
         return np.diag(self.up[:, i])
 
-    @Cach
     def Op_n_down(self, i):
-        """ 
+        """
         Calculate the spin-down occupation number operator `n_down` for site i.
 
         Returns
@@ -645,6 +644,27 @@ class Hubbard:
         n_down : ndarray (m, m)
         """
         return np.diag(self.down[:, i])
+
+    def Op_Sz(self, i):
+        """
+        Calculate the spin operator in z-direction `Sz` for site i.
+
+        Returns
+        -------
+        Sz : ndarray (m, m)
+        """
+        return np.diag((self.up - self.down)[:, i])
+
+    def Op_SzSz(self, i, j):
+        """ 
+        Calculate the spin-spin-correlation operator in z-direction `SzSz(i,j)` for sites i and j.
+
+        Returns
+        -------
+        SzSz : ndarray (m, m)
+        """
+        return self.Op_Sz(i) @ self.Op_Sz(j)
+
     # def Eigvecs_Hu(self):
     #     # H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
     #     H = np.array([self.H(u, 1) for u in self.u_array])
