@@ -49,6 +49,8 @@ u_range_Slider = widgets.FloatRangeSlider(
     orientation='horizontal',
     readout=True,
     readout_format='.1f',
+    style={'description_width': 'initial'},
+    layout=Layout(width="5cm")
 )
 ################################
 steps_Slider = widgets.IntSlider(
@@ -72,6 +74,7 @@ t_range_Slider = widgets.FloatRangeSlider(
     description='$t=$',
     continuous_update=False,
     orientation='horizontal',
+    style={'description_width': 'initial'},
     readout=True,
     readout_format='.1f',
 )
@@ -96,6 +99,7 @@ u_Slider = widgets.FloatSlider(
     description=r'$U=$',
     continuous_update=False,
     orientation='horizontal',
+    style={'description_width': 'initial'},
     readout=True,
     readout_format='.1f',
 )
@@ -108,9 +112,11 @@ t_Slider = widgets.FloatSlider(
     description=r'$t=$',
     continuous_update=False,
     orientation='horizontal',
+    style={'description_width': 'initial'},
     readout=True,
     readout_format='.1f',
 )
 ################################
 widgets.dlink((n_Slider, 'value'), (s_up_Slider, 'max'))
 widgets.dlink((n_Slider, 'value'), (s_down_Slider, 'max'))
+################################
