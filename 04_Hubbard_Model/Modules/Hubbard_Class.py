@@ -1,6 +1,7 @@
 # #Module for arbitrary hopping by user defined hopping and transition matrices
 
 
+from array import array
 from re import A
 from more_itertools import distinct_permutations
 
@@ -415,14 +416,7 @@ class Hubbard:
         **Kwargs : Widgets
             used to add sliders and other widgets to the displayed output
         """
-
-        # find indices of u_array that are within the range `u_range_Slider``
-        u_min = self.u_range.value[0]
-        u_max = self.u_range.value[1]
-        u = self.u_array
-
-        u_idx = np.nonzero(np.logical_and(u <= u_max, u >= u_min))
-        u = u[u_idx]
+        u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
 
         last_eigvals_u = self.Eigvals_Hu[-1, :]
         sorted_eigval_idx = np.argsort(last_eigvals_u)
@@ -475,13 +469,7 @@ class Hubbard:
         **Kwargs : Widgets
             used to add sliders and other widgets to the displayed output
         """
-        # find indices of t_array that are within the range `t_range_Slider``
-        t_min = self.t_range.value[0]
-        t_max = self.t_range.value[1]
-        t = self.t_array
-
-        t_idx = np.nonzero(np.logical_and(t <= t_max, t >= t_min))
-        t = t[t_idx]
+        t_idx, t = self.find_indices_of_slider(self.t_array, self.t_range)
 
         last_eigvals_t = self.Eigvals_Ht[-1, :]
         sorted_eigval_idx = np.argsort(last_eigvals_t)
@@ -520,21 +508,10 @@ class Hubbard:
         **Kwargs : Widgets
             used to add sliders and other widgets to the displayed output
         """
-        # find indices of t_array that are within the range `t_range_Slider``
-        t_min = self.t_range.value[0]
-        t_max = self.t_range.value[1]
-        t = self.t_array
-
-        t_idx = np.nonzero(np.logical_and(t <= t_max, t >= t_min))
-        t = t[t_idx]
-
-        # find indices of u_array that are within the range `u_range_Slider``
-        u_min = self.u_range.value[0]
+        t_idx, t = self.find_indices_of_slider(self.t_array, self.t_range)
+        u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
         u_max = self.u_range.value[1]
-        u = self.u_array
-
-        u_idx = np.nonzero(np.logical_and(u <= u_max, u >= u_min))
-        u = u[u_idx]
+        t_max = self.t_range.value[1]
 
         eig_t = np.array([np.linalg.eigvalsh(self.H(u_max, t))
                          for t in self.t_array])
@@ -664,3 +641,68 @@ class Hubbard:
         SzSz : ndarray (m, m)
         """
         return self.Op_Sz(i) @ self.Op_Sz(j)
+
+    def Plot_ExpVal_nn(self, **kwargs):
+        """
+        Method to plot the expectation value of the operator `nn_mean` for u in [u_min, u_max] and t=1.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+
+        last_eigvals_t = self.Eigvals_Ht[-1, :]
+        sorted_eigval_idx = np.argsort(last_eigvals_t)
+        eig_t = self.Eigvals_Ht[t_idx][:, sorted_eigval_idx]
+        uniq = np.unique(np.diag(self.Op_nn).astype(int), return_counts=True)
+        color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+
+        fig = plt.figure(figsize=(10, 6))
+        plt.title(
+            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the hopping amplitude $t$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and on-site interaction $U=10$")
+        plt.xlabel(r"$t$")
+        plt.ylabel(r"Eigenvalue(s)")
+        plt.grid()
+        axes = plt.plot(t, eig_t, ".-")
+
+        for idx, num in enumerate(np.cumsum(uniq[1])):
+            axes[num-1].set_label(f"{uniq[1][idx]}")
+
+        plt.gca().invert_xaxis()
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left",
+                   ncol=1, title="# of eigenvalues")
+        # plt.show()
+        return fig
+
+    @staticmethod
+    def find_indices_of_slider(array, range_slider):
+        """
+        Find indices of `array` that are within the range of the `range_slider`.
+
+        Parameters
+        ----------
+        array : ndarray
+            array of values to be filtered
+        range_slider : Slider
+            Slider object that contains the range of values to use as bounds
+
+        Returns
+        -------
+        s_idx : ndarray
+                indices of `array` that are within the range of the `range_slider`
+        s_arr : ndarray
+                        array of values that are within the range of the `range_slider`
+        """
+        s_min = range_slider.value[0]
+        s_max = range_slider.value[1]
+
+        s_idx = np.nonzero(np.logical_and(array <= s_max, array >= s_min))
+        s_arr = array[s_idx]
+        return s_idx, s_arr
