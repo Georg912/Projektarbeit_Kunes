@@ -49,8 +49,8 @@ u_range_Slider = widgets.FloatRangeSlider(
     orientation='horizontal',
     readout=True,
     readout_format='.1f',
+    layout=Layout(width="10cm"),
     style={'description_width': 'initial'},
-    layout=Layout(width="5cm")
 )
 ################################
 steps_Slider = widgets.IntSlider(

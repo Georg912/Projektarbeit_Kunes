@@ -29,6 +29,10 @@ from Modules.Cache_Decorator import Cach  # used for caching functions
 import numba as nb
 from numba import jit, njit
 import scipy.sparse.linalg as splin
+from fractions import Fraction
+from textwrap import fill
+from matplotlib.ticker import FormatStrFormatter
+
 
 # #possible TODOS:
 #     #write function to store hopping matrices and load them
@@ -110,7 +114,7 @@ class Hubbard:
 
         self.hoppings = self.Allowed_Hoppings_H()
 
-        self.Reset_H()
+        self.Reset()
 
         # Set all u and t Sliders
         # TODO: check how to adapt range of u and t sliders
@@ -120,7 +124,7 @@ class Hubbard:
         self.u_range = u_range_Slider
         self.t_range = t_range_Slider
         self.u_array = np.linspace(self.u_range.min, self.u_range.max, num=int(
-            2*self.u_range.max + 1), endpoint=True)
+            2*self.u_range.max + 10), endpoint=True)
         self.t_array = np.linspace(self.t_range.min, self.t_range.max, num=int(
             2*self.t_range.max + 1), endpoint=True)
 
@@ -187,7 +191,7 @@ class Hubbard:
         self.basis = self.Construct_Basis()
         self.basis_index.max = self.basis.shape[0] - 1
         self.hoppings = self.Allowed_Hoppings_H()
-        self.Reset_H()
+        self.Reset()
 
     def on_change_s_up(self, change):
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
@@ -195,7 +199,7 @@ class Hubbard:
         else:
             self.basis = self.Construct_Basis()
             self.basis_index.max = self.basis.shape[0] - 1
-            self.Reset_H()
+            self.Reset()
 
     def on_change_s_down(self, change):
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
@@ -203,7 +207,7 @@ class Hubbard:
         else:
             self.basis = self.Construct_Basis()
             self.basis_index.max = self.basis.shape[0] - 1
-            self.Reset_H()
+            self.Reset()
 
     @Cach
     def up(self):
@@ -380,12 +384,12 @@ class Hubbard:
         print(f"Dimension of H = {dimension} x {dimension}")
         print(f"H = \n{self.H(u,t)}")
 
-    def Reset_H(self):
+    def Reset(self):
         """
-        Method to reset the cached Hamiltonian H.
+        Method to reset all cached properties (if they were already cached).
         """
         cached_properties = ["Op_nn", "Ht", "Hu",
-                             "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "Op_n_up", "Op_n_down"]
+                             "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "All_Eigvals_and_Eigvecs"]
         for prop in cached_properties:
             self.__dict__.pop(prop, None)
 
@@ -563,9 +567,15 @@ class Hubbard:
         -------
         eig_vec : ndarray (len(u), m)
         """
-        _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
-        eig_vecs = np.array([splin.eigsh(h, k=1, which="SA")[1].ravel()
-                             for h in _H])
+        # sparse method does not work for matrixes with dimension 1x1
+        if self.basis.shape[0] == 1:
+            #     _H = np.array([self.H(u, 1) for u in self.u_array])
+            #     eig_vecs = np.linalg.eigh(_H)[1].reshape(-1, 1)
+            eig_vecs = np.ones((self.u_array.size, 1))
+        else:
+            _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
+            eig_vecs = np.array([splin.eigsh(h, k=1, which="SA")[1].ravel()
+                                 for h in _H])
         return eig_vecs
 
     def diag(self, i):
@@ -633,7 +643,7 @@ class Hubbard:
         return np.diag((self.up - self.down)[:, i])
 
     def Op_SzSz(self, i, j):
-        """ 
+        """
         Calculate the spin-spin-correlation operator in z-direction `SzSz(i,j)` for sites i and j.
 
         Returns
@@ -642,46 +652,63 @@ class Hubbard:
         """
         return self.Op_Sz(i) @ self.Op_Sz(j)
 
-    def Plot_ExpVal_nn(self, **kwargs):
+    @Cach
+    def ExpVal_nn_mean(self):
         """
-        Method to plot the expectation value of the operator `nn_mean` for u in [u_min, u_max] and t=1.
+        Return the cached ground state expectation value of the average double occuption number operator `nn_mean` (for performance reasons).
 
-        Returns
-        -------
-        fig : matplotlib.figure.Figure
-            figure object to save as image-file
-
-        Other Parameters
-        ----------------
-        **Kwargs : Widgets
-            used to add sliders and other widgets to the displayed output
+        Return
+        ------
+        expval_nn_mean : ndarray (m,)
         """
+        return self.Exp_Val_0(self.Op_nn_mean)
 
-        last_eigvals_t = self.Eigvals_Ht[-1, :]
-        sorted_eigval_idx = np.argsort(last_eigvals_t)
-        eig_t = self.Eigvals_Ht[t_idx][:, sorted_eigval_idx]
-        uniq = np.unique(np.diag(self.Op_nn).astype(int), return_counts=True)
-        color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]))
-        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+    @Cach
+    def ExpVal_Sz(self):
+        """
+        Return the cached ground state expectation value of the spin operator `Sz` (for performance reasons).
 
-        fig = plt.figure(figsize=(10, 6))
-        plt.title(
-            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the hopping amplitude $t$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and on-site interaction $U=10$")
-        plt.xlabel(r"$t$")
-        plt.ylabel(r"Eigenvalue(s)")
-        plt.grid()
-        axes = plt.plot(t, eig_t, ".-")
+        Return
+        ------
+        expval_Sz : ndarray (m,)
+        """
+        return self.Exp_Val_0(self.Op_Sz(0))
 
-        for idx, num in enumerate(np.cumsum(uniq[1])):
-            axes[num-1].set_label(f"{uniq[1][idx]}")
+    @Cach
+    def ExpVal_SzSz_ii(self):
+        """
+        Return the cached ground state expectation value of the spin-spin correlation operator `SzSz` (for performance reasons).
 
-        plt.gca().invert_xaxis()
-        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left",
-                   ncol=1, title="# of eigenvalues")
-        # plt.show()
-        return fig
+        Return
+        ------
+        expval_SzSz : ndarray (m,)
+        """
+        return self.Exp_Val_0(self.Op_SzSz(0, 0))
 
-    @staticmethod
+    @Cach
+    def ExpVal_SzSz_ij(self):
+        """
+        Return the cached ground state expectation value of the spin-spin correlation operator `Sz_i Sz_j` for all relevant correlation sites (for performance reasons).
+
+        Return
+        ------
+        expval_SzSz : list[ndarray(m,)]
+        """
+        return [self.Exp_Val_0(self.Op_SzSz(0, i)) for i in np.arange(self.n.value // 2 + 1)]
+
+    @Cach
+    def Chi(self):
+        eig_vals, eig_vecs = self.All_Eigvals_and_Eigvecs
+        eig_vec0 = eig_vecs[:, :, 0]
+        eig_val0 = eig_vals[:, 0]
+        shifted_eigvals = eig_vals[:, 1:] - eig_val0[:, None]
+
+        return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], self.Op_Sz(0) @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
+
+    def Chi_staggered(self):
+        pass
+
+    @ staticmethod
     def find_indices_of_slider(array, range_slider):
         """
         Find indices of `array` that are within the range of the `range_slider`.
@@ -706,3 +733,147 @@ class Hubbard:
         s_idx = np.nonzero(np.logical_and(array <= s_max, array >= s_min))
         s_arr = array[s_idx]
         return s_idx, s_arr
+
+    def Plot_ExpVal_nn(self, **kwargs):
+        """
+        Method to plot the expectation value of the operator `nn_mean` for u in [u_min, u_max] and t=1.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+
+        u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
+        nn_max = _s_up * _s_down / _n**2
+        nn_min = max(0, (_s_up + _s_down - _n) / _n)
+        nn = np.round(self.ExpVal_nn_mean, 5)
+        nn[0] = np.round(nn_max, 5)
+        nn = nn[u_idx]
+        nn_str = r"$\left\langle n_i^\mathrm{up} n_i^\mathrm{down} \right\rangle $"
+
+        color = mpl.cm.tab10(np.arange(0, 10))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+        fig = plt.figure(figsize=(10, 6))
+
+        title = fill(
+            r"Average double occupation $\langle$$n_i^\mathrm{up}$$n_i^\mathrm{down}$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        plt.title(rf"{title}")
+        plt.xlabel(r"$U$")
+        plt.ylabel(nn_str)
+        plt.grid()
+
+        plt.plot(u, nn, ".-", label=nn_str)
+        plt.plot(u, nn_max * np.ones(u.shape), "--",
+                 label=str(Fraction(nn_max).limit_denominator(100)))
+        plt.plot(u, nn_min * np.ones(u.shape), "--",
+                 label=str(Fraction(nn_min).limit_denominator(100)))
+
+        # otherwise n=3, s_up=3, s_down=2 or vice versa has weird format
+        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", ncol=1)
+        return fig
+
+    def Plot_ExpVal_Sz(self, **kwargs):
+        """
+        Method to plot the expectation value of the spin operator `Sz_i`, `Sz_i^2` and `dSz_i^2` for u in [u_min, u_max] and t=1.
+
+        Returns
+        -------
+
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+
+        u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
+        # nn_max = _s_up * _s_down / _n**2
+        # nn_min = max(0, (_s_up + _s_down - _n) / _n)
+        Sz = np.round(self.ExpVal_Sz, 5)
+        Sz2 = np.round(self.ExpVal_SzSz_ii, 5)
+        # Sz[0] = np.round(Sz_max, 5)
+        Sz = Sz[u_idx]
+        Sz2 = Sz2[u_idx]
+        Sz_str = r"$\left\langle S_{iz} \right\rangle $"
+        Sz2_str = r"$\left\langle S^2_{iz} \right\rangle $"
+        dSz_str = r"$\left\langle \Delta S^2_{iz} \right\rangle $"
+
+        color = mpl.cm.tab10(np.arange(0, 10))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+        fig = plt.figure(figsize=(10, 6))
+
+        title = fill(
+            r"Average Spin moment $\langle$$S_{iz}$$\rangle$, $\langle$$S^2_{iz}$$\rangle$ and $\langle$$\Delta$$S_{iz}^2$$\rangle$"f" as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        plt.title(rf"{title}")
+        plt.xlabel(r"$U$")
+        plt.ylabel(
+            r"Expectation value $\left\langle GS \vert \hat O \vert GS \right\rangle $")
+        plt.grid()
+
+        plt.plot(u, Sz, ".-", label=f"{Sz_str}")
+        plt.plot(u, Sz2, ".-", label=f"{Sz2_str}")
+        plt.plot(u, Sz2 - Sz**2, ".-", label=f"{dSz_str}")
+        plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", ncol=1)
+        return fig
+
+    def Plot_ExpVal_SzSz(self, **kwargs):
+        """
+        Method to plot the expectation value of the spin-spin correlation operator `Sz_i Sz_j` for u in [u_min, u_max] and t=1.
+
+        Returns
+        -------
+
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+                used to add sliders and other widgets to the displayed output
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+
+        u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
+        SzSz_ij = [S[u_idx] for S in self.ExpVal_SzSz_ij]
+
+        SzSz_str = r"$\left\langle S_{iz} S_{jz} \right\rangle $"
+
+        color = mpl.cm.tab10(np.arange(0, 10))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+        fig = plt.figure(figsize=(10, 6))
+
+        title = fill(
+            r"Spin-spin correlation $\langle$$S_{iz}$$S_{jz}$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        plt.title(rf"{title}")
+        plt.xlabel(r"$U$")
+        plt.ylabel(SzSz_str)
+        plt.grid()
+
+        for i in np.arange(_n // 2 + 1):
+            plt.plot(u, SzSz_ij[i], ".-",
+                     label=r"$\langle S_{1z}S_{"f"{i+1}"r"z}\rangle$")
+
+        plt.legend(bbox_to_anchor=(1.0, 1), loc="upper left", ncol=1)
+        return fig
+
+    @Cach
+    def All_Eigvals_and_Eigvecs(self):
+        _H = np.array([self.H(u, 1) for u in self.u_array])
+        return np.linalg.eigh(_H)
