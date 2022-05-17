@@ -389,7 +389,7 @@ class Hubbard:
         Method to reset all cached properties (if they were already cached).
         """
         cached_properties = ["Op_nn", "Ht", "Hu",
-                             "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "All_Eigvals_and_Eigvecs"]
+                             "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "Chi_staggered", "All_Eigvals_and_Eigvecs"]
         for prop in cached_properties:
             self.__dict__.pop(prop, None)
 
@@ -698,15 +698,47 @@ class Hubbard:
 
     @Cach
     def Chi(self):
+        """
+        Return the local susceptibility `chi` = Sum_{n>g} |<psi_n|S_iz|psi_g>|^2 / (E_n - E_g) of the system.
+
+        Returns
+        -------
+        Chi : ndarray (len(u),)
+        """
+
         eig_vals, eig_vecs = self.All_Eigvals_and_Eigvecs
         eig_vec0 = eig_vecs[:, :, 0]
         eig_val0 = eig_vals[:, 0]
         shifted_eigvals = eig_vals[:, 1:] - eig_val0[:, None]
 
-        return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], self.Op_Sz(0) @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
+        # deal with degenerate eigenvalues
+        shifted_eigvals = np.where(
+            np.abs(shifted_eigvals) < 1e-12, 1e16, shifted_eigvals)
 
+        return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], self.Op_Sz((0)) @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
+
+    @Cach
     def Chi_staggered(self):
-        pass
+        """
+        Return the staggered susceptibility `chi_staggered` = Sum_i Sum_{n>g} |<psi_n|(-1)^i S_iz|psi_g>|^2 / (E_n - E_g) of the system.
+
+        Returns
+        -------
+        Chi_staggered : ndarray (len(u),)
+        """
+        Sz_staggered = np.sum([(-1)**i * self.Op_Sz(i)
+                              for i in np.arange(self.n.value)], axis=0)
+
+        eig_vals, eig_vecs = self.All_Eigvals_and_Eigvecs
+        eig_vec0 = eig_vecs[:, :, 0]
+        eig_val0 = eig_vals[:, 0]
+        shifted_eigvals = eig_vals[:, 1:] - eig_val0[:, None]
+
+        # deal with degenerate eigenvalues
+        shifted_eigvals = np.where(
+            np.abs(shifted_eigvals) < 1e-12, 1e16, shifted_eigvals)
+
+        return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], Sz_staggered @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
 
     @ staticmethod
     def find_indices_of_slider(array, range_slider):
@@ -871,6 +903,72 @@ class Hubbard:
                      label=r"$\langle S_{1z}S_{"f"{i+1}"r"z}\rangle$")
 
         plt.legend(bbox_to_anchor=(1.0, 1), loc="upper left", ncol=1)
+        return fig
+
+    def Plot_Local_Chi(self, **kwargs):
+        """x
+        Method to plot the local, magnetic susceptibility chi for u in [u_min, u_max] and t=1.
+
+        Returns
+        -------
+
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+                used to add sliders and other widgets to the displayed output
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+
+        u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
+
+        fig = plt.figure(figsize=(10, 6))
+
+        title = fill(
+            r"Local susceptibility $\chi_\mathrm{loc}$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        plt.title(rf"{title}")
+        plt.xlabel(r"$U$")
+        plt.ylabel(r"$\chi_\mathrm{loc}$")
+        plt.grid()
+
+        plt.plot(u, self.Chi[u_idx].round(5), ".-")
+        return fig
+
+    def Plot_Chi_Staggered(self, **kwargs):
+        """x
+        Method to plot the staggered, magnetic susceptibility chi for u in [u_min, u_max] and t=1.
+
+        Returns
+        -------
+
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+                used to add sliders and other widgets to the displayed output
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+
+        u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
+
+        fig = plt.figure(figsize=(10, 6))
+
+        title = fill(
+            r"Staggered susceptibility $\chi_\mathrm{staggered}$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        plt.title(rf"{title}")
+        plt.xlabel(r"$U$")
+        plt.ylabel(r"$\chi_\mathrm{staggered}$")
+        plt.grid()
+
+        plt.plot(u, self.Chi_staggered[u_idx].round(5), ".-")
         return fig
 
     @Cach
