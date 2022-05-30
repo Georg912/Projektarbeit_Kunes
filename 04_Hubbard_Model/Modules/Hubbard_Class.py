@@ -117,16 +117,17 @@ class Hubbard:
         self.Reset()
 
         # Set all u and t Sliders
-        # TODO: check how to adapt range of u and t sliders
-        ##############################################
         self.u = u_Slider
-        self.t = t_Slider
         self.u_range = u_range_Slider
+        du = (self.u_range.max - self.u_range.min) / self.u_range.step
+        self.u_array = np.linspace(
+            self.u_range.min, self.u_range.max, num=int(du) + 1, endpoint=True)
+
+        self.t = t_Slider
         self.t_range = t_range_Slider
-        self.u_array = np.linspace(self.u_range.min, self.u_range.max, num=int(
-            2*self.u_range.max + 10), endpoint=True)
-        self.t_array = np.linspace(self.t_range.min, self.t_range.max, num=int(
-            2*self.t_range.max + 1), endpoint=True)
+        dt = (self.t_range.max - self.t_range.min) / self.t_range.step
+        self.t_array = np.linspace(
+            self.t_range.min, self.t_range.max, num=1 + int(dt), endpoint=True)
 
     def Construct_Basis(self):
         """

@@ -42,13 +42,13 @@ s_down_Slider = widgets.BoundedIntText(
 u_range_Slider = widgets.FloatRangeSlider(
     value=[2, 7],
     min=0,
-    max=40.0,
-    step=0.1,
+    max=20.0,
+    step=0.25,
     description=r'$U=$',
     continuous_update=False,
     orientation='horizontal',
     readout=True,
-    readout_format='.1f',
+    readout_format='.2f',
     layout=Layout(width="10cm"),
     style={'description_width': 'initial'},
 )
@@ -70,13 +70,13 @@ t_range_Slider = widgets.FloatRangeSlider(
     value=[0, 1],
     min=0,
     max=5,
-    step=0.1,
+    step=0.25,
     description='$t=$',
     continuous_update=False,
     orientation='horizontal',
     style={'description_width': 'initial'},
     readout=True,
-    readout_format='.1f',
+    readout_format='.2f',
 )
 ################################
 basis_index_Slider = widgets.BoundedIntText(
