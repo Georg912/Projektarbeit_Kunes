@@ -117,6 +117,7 @@ class Hubbard:
         self.Reset()
 
         # Set all u and t Sliders
+        ##############################################
         self.u = u_Slider
         self.u_range = u_range_Slider
         du = (self.u_range.max - self.u_range.min) / self.u_range.step
@@ -855,12 +856,13 @@ class Hubbard:
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(
-            r"Expectation value $\left\langle GS \vert \hat O \vert GS \right\rangle $")
+            r"Expectation value $\left\langle \hat O \right\rangle $")
         plt.grid()
 
         plt.plot(u, Sz, ".-", label=f"{Sz_str}")
         plt.plot(u, Sz2, ".-", label=f"{Sz2_str}")
         plt.plot(u, Sz2 - Sz**2, ".-", label=f"{dSz_str}")
+        #plt.plot(u, 1 - 2*self.ExpVal_nn_mean[u_idx])
         plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", ncol=1)
         return fig
 
