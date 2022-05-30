@@ -563,21 +563,24 @@ class Hubbard:
     @Cach
     def GS(self):
         """
-        Calculate the ground state eigevector of the Hamiltonian H(u,t) for u in [u_min, u_max] and t=1. Methods uses sparse matrices to speed up the computation of the eigenvector associtated with the smallest (algebraic) eigenvalue of H(u,t).
+        Calculate the (normalized) ground state eigevector (or eigenvectors if degenerate) of the Hamiltonian H(u,t) for u in [u_min, u_max] and t=1. Methods uses sparse matrices to speed up the computation of the eigenvector associtated with the smallest (algebraic) eigenvalue of H(u,t). k is the degeneracy of the ground state, i.e. k = 1 for a non-degenerate groundstate.
 
         Returns
         -------
-        eig_vec : ndarray (len(u), m)
+        eig_vec : ndarray (len(u), m, k)
         """
         # sparse method does not work for matrixes with dimension 1x1
         if self.basis.shape[0] == 1:
-            #     _H = np.array([self.H(u, 1) for u in self.u_array])
-            #     eig_vecs = np.linalg.eigh(_H)[1].reshape(-1, 1)
             eig_vecs = np.ones((self.u_array.size, 1))
+        elif (self.s_up.value + self.s_down.value) % 2 == 0:
+            _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
+            eig_vecs = np.array([splin.eigsh(h, k=1, which="SA")[1]
+                                 for h in _H])
+        # if up and down spin sum is odd, we have 2 degenerate ground states
         else:
             _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
-            eig_vecs = np.array([splin.eigsh(h, k=1, which="SA")[1].ravel()
-                                 for h in _H])
+            eig_vecs = 1 / np.sqrt(2) * np.array([splin.eigsh(h, k=2, which="SA")[1]
+                                                  for h in _H])
         return eig_vecs
 
     def diag(self, i):
@@ -612,7 +615,8 @@ class Hubbard:
             Expectation value of the operator Op for u in [u_min, u_max]
         """
         # Calculates (vectorized) vector-wise matrix vector sandwich EV_i = vec_i.T * Op * vec_i
-        return np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
+        #np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
+        return np.einsum("ijk, kji -> i", self.GS, Op @ self.GS.T)
 
     def Op_n_up(self, i):
         """
@@ -862,7 +866,7 @@ class Hubbard:
         plt.plot(u, Sz, ".-", label=f"{Sz_str}")
         plt.plot(u, Sz2, ".-", label=f"{Sz2_str}")
         plt.plot(u, Sz2 - Sz**2, ".-", label=f"{dSz_str}")
-        #plt.plot(u, 1 - 2*self.ExpVal_nn_mean[u_idx])
+        # plt.plot(u, 1 - 2*self.ExpVal_nn_mean[u_idx])
         plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", ncol=1)
         return fig
 
