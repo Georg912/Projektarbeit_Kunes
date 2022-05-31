@@ -560,10 +560,25 @@ class Hubbard:
         # fig.show()
         return fig
 
+    def is_degenerate(self):
+        """
+         Method to check if the ground state of the Hamiltonian is degenerate. The ground state is degenerate if the sum of up and down spins is odd AND the number of up or down spin electrons is not zero or `n`
+
+        Returns
+        -------
+        bool
+            True if the Hamiltonian is degenerate, else False
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+
+        return not ((_s_up + _s_down) % 2 == 0 or (_s_up == 0 or _s_up == _n or _s_down == 0 or _s_down == _n))
+
     @Cach
     def GS(self):
         """
-        Calculate the (normalized) ground state eigevector (or eigenvectors if degenerate) of the Hamiltonian H(u,t) for u in [u_min, u_max] and t=1. Methods uses sparse matrices to speed up the computation of the eigenvector associtated with the smallest (algebraic) eigenvalue of H(u,t). k is the degeneracy of the ground state, i.e. k = 1 for a non-degenerate groundstate.
+        Calculate the (normalized) ground state eigevector (or eigenvectors if degenerate) of the Hamiltonian H(u,t) for u in [u_min, u_max] and t=1. Methods uses sparse matrices to speed up the computation of the eigenvector associtated with the smallest (algebraic) eigenvalue of H(u,t). k is the degeneracy of the ground state, i.e. k = 1 for a non-degenerate ground state.
 
         Returns
         -------
@@ -571,16 +586,18 @@ class Hubbard:
         """
         # sparse method does not work for matrixes with dimension 1x1
         if self.basis.shape[0] == 1:
-            eig_vecs = np.ones((self.u_array.size, 1))
-        elif (self.s_up.value + self.s_down.value) % 2 == 0:
+            eig_vecs = np.ones((self.u_array.size, 1, 1))
+        # deal with degenerate ground state
+        elif self.is_degenerate():
+            _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
+            eig_vecs = np.array([splin.eigsh(h, k=2, which="SA")[1]
+                                 for h in _H]) / np.sqrt(2)
+        # deal with non-degenerate ground state
+        else:
             _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
             eig_vecs = np.array([splin.eigsh(h, k=1, which="SA")[1]
                                  for h in _H])
-        # if up and down spin sum is odd, we have 2 degenerate ground states
-        else:
-            _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
-            eig_vecs = 1 / np.sqrt(2) * np.array([splin.eigsh(h, k=2, which="SA")[1]
-                                                  for h in _H])
+
         return eig_vecs
 
     def diag(self, i):
@@ -615,7 +632,7 @@ class Hubbard:
             Expectation value of the operator Op for u in [u_min, u_max]
         """
         # Calculates (vectorized) vector-wise matrix vector sandwich EV_i = vec_i.T * Op * vec_i
-        #np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
+        # np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
         return np.einsum("ijk, kji -> i", self.GS, Op @ self.GS.T)
 
     def Op_n_up(self, i):
@@ -705,23 +722,19 @@ class Hubbard:
     @Cach
     def Chi(self):
         """
-        Return the local susceptibility `chi` = Sum_{n>g} |<psi_n|S_iz|psi_g>|^2 / (E_n - E_g) of the system.
+        Return the local susceptibility `chi` = Sum_{i=1}^{n} Sum_{m>g} |<psi_m|S_iz|psi_g>|^2 / (E_m - E_g) of the system.
 
         Returns
         -------
         Chi : ndarray (len(u),)
         """
 
-        eig_vals, eig_vecs = self.All_Eigvals_and_Eigvecs
-        eig_vec0 = eig_vecs[:, :, 0]
-        eig_val0 = eig_vals[:, 0]
-        shifted_eigvals = eig_vals[:, 1:] - eig_val0[:, None]
+        _n = self.n.value
+        _chi = 0.
 
-        # deal with degenerate eigenvalues
-        shifted_eigvals = np.where(
-            np.abs(shifted_eigvals) < 1e-12, 1e16, shifted_eigvals)
-
-        return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], self.Op_Sz((0)) @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
+        for i in np.arange(_n):
+            _chi += self.Calc_Coupling(self.Op_Sz(i))
+        return _chi / _n
 
     @Cach
     def Chi_staggered(self):
@@ -735,16 +748,7 @@ class Hubbard:
         Sz_staggered = np.sum([(-1)**i * self.Op_Sz(i)
                               for i in np.arange(self.n.value)], axis=0)
 
-        eig_vals, eig_vecs = self.All_Eigvals_and_Eigvecs
-        eig_vec0 = eig_vecs[:, :, 0]
-        eig_val0 = eig_vals[:, 0]
-        shifted_eigvals = eig_vals[:, 1:] - eig_val0[:, None]
-
-        # deal with degenerate eigenvalues
-        shifted_eigvals = np.where(
-            np.abs(shifted_eigvals) < 1e-12, 1e16, shifted_eigvals)
-
-        return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], Sz_staggered @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
+        return self.Calc_Coupling(Sz_staggered)
 
     @ staticmethod
     def find_indices_of_slider(array, range_slider):
@@ -942,7 +946,8 @@ class Hubbard:
         plt.ylabel(r"$\chi_\mathrm{loc}$")
         plt.grid()
 
-        plt.plot(u, self.Chi[u_idx].round(5), ".-")
+        # For U=0 some combinations of n and s_up/s_down are more than twice degenerate, to not deal with these corner cases we just skip them completely
+        plt.plot(u[1:], self.Chi[u_idx][1:].round(5), ".-")
         return fig
 
     def Plot_Chi_Staggered(self, **kwargs):
@@ -982,3 +987,30 @@ class Hubbard:
     def All_Eigvals_and_Eigvecs(self):
         _H = np.array([self.H(u, 1) for u in self.u_array])
         return np.linalg.eigh(_H)
+
+    def Calc_Coupling(self, Op):
+        """
+        Helper function to calculate the perturbative coupling to the given operator, given by Sum_{n>g} |<psi_n| Op |psi_g>|^2 / (E_n - E_g) of the system.
+
+        Returns
+        -------
+        Coupling : ndarray (len(u),)
+        """
+
+        eig_vals, eig_vecs = self.All_Eigvals_and_Eigvecs
+
+        # deal with degenerate ground states
+        if self.is_degenerate():
+            eig_vec0 = np.sum(eig_vecs[:, :, :2], axis=2) / np.sqrt(2)
+            eig_val0 = eig_vals[:, 0]
+            shifted_eigvals = eig_vals[:, 2:] - eig_val0[:, None]
+
+            return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 2:], Op @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
+
+        # deal with non-degenerate ground state
+        else:
+            eig_vec0 = eig_vecs[:, :, 0]
+            eig_val0 = eig_vals[:, 0]
+            shifted_eigvals = eig_vals[:, 1:] - eig_val0[:, None]
+
+            return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], Op @ eig_vec0.T)**2 / shifted_eigvals, axis=1)

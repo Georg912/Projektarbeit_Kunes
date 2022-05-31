@@ -41,7 +41,7 @@ s_down_Slider = widgets.BoundedIntText(
 ################################
 u_range_Slider = widgets.FloatRangeSlider(
     value=[2, 7],
-    min=0,
+    min=0.,
     max=20.0,
     step=0.25,
     description=r'$U=$',
@@ -86,7 +86,7 @@ basis_index_Slider = widgets.BoundedIntText(
     step=1,
     value=6,
     layout=Layout(width="3cm"),  # height="80px"),#"auto"),
-    description=r'State $=$',
+    description=r'$\mathrm{State }=$',
     style={'description_width': 'initial'},
     continuous_update=False
 )
