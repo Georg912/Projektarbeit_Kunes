@@ -17,10 +17,10 @@ import matplotlib.pyplot as plt  # Plotting
 import matplotlib as mpl
 from cycler import cycler  # used for color cycles in mpl
 
-from Modules.Widgets import n_Slider, s_up_Slider, s_down_Slider
-from Modules.Widgets import u_Slider, t_Slider, u_range_Slider, t_range_Slider
-from Modules.Widgets import basis_index_Slider
-from Modules.Cache_Decorator import Cach  # used for caching functions
+from .Module_Widgets import n_Slider, s_up_Slider, s_down_Slider
+from .Module_Widgets import u_Slider, t_Slider, u_range_Slider, t_range_Slider
+from .Module_Widgets import basis_index_Slider
+from .Module_Cache_Decorator import Cach  # used for caching functions
 # # from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
 # # from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
 # # from Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText

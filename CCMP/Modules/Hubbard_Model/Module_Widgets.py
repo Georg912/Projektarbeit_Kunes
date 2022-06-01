@@ -86,7 +86,7 @@ basis_index_Slider = widgets.BoundedIntText(
     step=1,
     value=6,
     layout=Layout(width="3cm"),  # height="80px"),#"auto"),
-    description=r'$\mathrm{State }=$',
+    description=r'State =',
     style={'description_width': 'initial'},
     continuous_update=False
 )

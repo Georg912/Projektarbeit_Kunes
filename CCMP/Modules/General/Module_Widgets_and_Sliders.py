@@ -5,11 +5,11 @@ import time  # used for `sleep`
 from ipywidgets import Layout
 import numpy as np
 from IPython.display import clear_output
-from Module_Utilities import check_if_int
-from Module_Symmetry_and_Gauge import Hopping_Matrix_with_Phase as H
-from Module_Symmetry_and_Gauge import Right_Translation_Matrix as T
-from Module_Symmetry_and_Gauge import Magnetic_Flux_Matrix as M
-from Module_Symmetry_and_Gauge import Reflection_Matrix as R
+from .Module_Utilities import check_if_int
+from ..Gauge_Symmetry.Module_Symmetry_and_Gauge import Hopping_Matrix_with_Phase as H
+from ..Gauge_Symmetry.Module_Symmetry_and_Gauge import Right_Translation_Matrix as T
+from ..Gauge_Symmetry.Module_Symmetry_and_Gauge import Magnetic_Flux_Matrix as M
+from ..Gauge_Symmetry.Module_Symmetry_and_Gauge import Reflection_Matrix as R
 
 out = widgets.Output()
 ###########################################################################################################
