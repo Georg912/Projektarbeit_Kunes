@@ -7,6 +7,7 @@ from more_itertools import distinct_permutations
 
 import scipy.spatial.distance as sp
 import scipy
+import scipy.linalg as sp_la
 import numpy as np
 import ipywidgets as widgets
 import time  # , math, copy
@@ -562,18 +563,23 @@ class Hubbard:
 
     def is_degenerate(self):
         """
-         Method to check if the ground state of the Hamiltonian is degenerate. The ground state is degenerate if the sum of up and down spins is odd AND the number of up or down spin electrons is not zero or `n`
+         Method to check if the ground state of the Hamiltonian is degenerate.
+         Checks the degeneracy for H(U=5, t=1) because U=0 is a special case
 
         Returns
         -------
         bool
             True if the Hamiltonian is degenerate, else False
         """
-        _s_up = self.s_up.value
-        _s_down = self.s_down.value
-        _n = self.n.value
+        _H = self.H(5, 1)
 
-        return not ((_s_up + _s_down) % 2 == 0 or (_s_up == 0 or _s_up == _n or _s_down == 0 or _s_down == _n))
+        if _H.shape[0] == 1:
+            return False
+        else:
+            vals = sp_la.eigvalsh(_H, subset_by_index=[0, 1])
+            _, count = np.unique(vals.round(5), return_counts=True)
+
+            return True if count[0] == 2 else False
 
     @Cach
     def GS(self):
@@ -584,12 +590,13 @@ class Hubbard:
         -------
         eig_vec : ndarray (len(u), m, k)
         """
+        t = 1
         # sparse method does not work for matrixes with dimension 1x1
         if self.basis.shape[0] == 1:
             eig_vecs = np.ones((self.u_array.size, 1, 1))
         # deal with degenerate ground state
         elif self.is_degenerate():
-            _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
+            _H = [scipy.sparse.csr_matrix(self.H(u, 3)) for u in self.u_array]
             eig_vecs = np.array([splin.eigsh(h, k=2, which="SA")[1]
                                  for h in _H]) / np.sqrt(2)
         # deal with non-degenerate ground state
@@ -633,7 +640,16 @@ class Hubbard:
         """
         # Calculates (vectorized) vector-wise matrix vector sandwich EV_i = vec_i.T * Op * vec_i
         # np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
-        return np.einsum("ijk, kji -> i", self.GS, Op @ self.GS.T)
+        a = np.einsum("ijk, kji -> i", self.GS, Op @ self.GS.T)
+
+        k = min(10, self.basis.shape[0] - 1)
+        vals, vecs = splin.eigsh(
+            scipy.sparse.csr_matrix(self.H(0, 1)), k=k, which="SA")
+        vals, counts = np.unique(vals.round(5), return_counts=True)
+        vecs1 = vecs[np.newaxis, :, :counts[0]] / np.sqrt(counts[0])
+        b = np.einsum("ijk, kji -> i", vecs1, Op @ vecs1.T)[0]
+        a[0] = b
+        return a
 
     def Op_n_up(self, i):
         """
@@ -980,7 +996,7 @@ class Hubbard:
         plt.ylabel(r"$\chi_\mathrm{staggered}$")
         plt.grid()
 
-        plt.plot(u, self.Chi_staggered[u_idx].round(5), ".-")
+        plt.plot(u[1:], self.Chi_staggered[u_idx][1:].round(5), ".-")
         return fig
 
     @Cach
