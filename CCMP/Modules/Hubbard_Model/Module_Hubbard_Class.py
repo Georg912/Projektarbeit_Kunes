@@ -35,14 +35,6 @@ from textwrap import fill
 from matplotlib.ticker import FormatStrFormatter
 
 
-# #possible TODOS:
-#     #write function to store hopping matrices and load them
-#     #clean class
-#     #document module
-#     # implement sparse matrices
-#     # implement faster calcualtion of operator matrices
-
-
 @jit
 def is_single_hopping_process(x, y, cre, anh):
     """
@@ -590,18 +582,17 @@ class Hubbard:
         -------
         eig_vec : ndarray (len(u), m, k)
         """
-        t = 1
         # sparse method does not work for matrixes with dimension 1x1
         if self.basis.shape[0] == 1:
             eig_vecs = np.ones((self.u_array.size, 1, 1))
         # deal with degenerate ground state
         elif self.is_degenerate():
-            _H = [scipy.sparse.csr_matrix(self.H(u, 3)) for u in self.u_array]
+            _H = [scipy.sparse.csr_matrix(self.H(u, 2)) for u in self.u_array]
             eig_vecs = np.array([splin.eigsh(h, k=2, which="SA")[1]
                                  for h in _H]) / np.sqrt(2)
         # deal with non-degenerate ground state
         else:
-            _H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
+            _H = [scipy.sparse.csr_matrix(self.H(u, 2)) for u in self.u_array]
             eig_vecs = np.array([splin.eigsh(h, k=1, which="SA")[1]
                                  for h in _H])
 
@@ -643,11 +634,14 @@ class Hubbard:
         a = np.einsum("ijk, kji -> i", self.GS, Op @ self.GS.T)
 
         k = min(10, self.basis.shape[0] - 1)
-        vals, vecs = splin.eigsh(
-            scipy.sparse.csr_matrix(self.H(0, 1)), k=k, which="SA")
-        vals, counts = np.unique(vals.round(5), return_counts=True)
-        vecs1 = vecs[np.newaxis, :, :counts[0]] / np.sqrt(counts[0])
-        b = np.einsum("ijk, kji -> i", vecs1, Op @ vecs1.T)[0]
+        if k > 0:
+            vals, vecs = splin.eigsh(
+                scipy.sparse.csr_matrix(self.H(0, 1)), k=k, which="SA")
+            vals, counts = np.unique(vals.round(5), return_counts=True)
+            vecs1 = vecs[np.newaxis, :, :counts[0]] / np.sqrt(counts[0])
+            b = np.einsum("ijk, kji -> i", vecs1, Op @ vecs1.T)[0]
+        else:
+            b = Op.item(0, 0)
         a[0] = b
         return a
 
@@ -829,10 +823,10 @@ class Hubbard:
         plt.ylabel(nn_str)
         plt.grid()
 
-        plt.plot(u, nn, ".-", label=nn_str)
-        plt.plot(u, nn_max * np.ones(u.shape), "--",
+        plt.plot(u, nn.round(4), ".-", label=nn_str)
+        plt.plot(u, (nn_max * np.ones(u.shape)).round(4), "--",
                  label=str(Fraction(nn_max).limit_denominator(100)))
-        plt.plot(u, nn_min * np.ones(u.shape), "--",
+        plt.plot(u, (nn_min * np.ones(u.shape)).round(4), "--",
                  label=str(Fraction(nn_min).limit_denominator(100)))
 
         # otherwise n=3, s_up=3, s_down=2 or vice versa has weird format
@@ -951,6 +945,11 @@ class Hubbard:
         _s_down = self.s_down.value
         _n = self.n.value
 
+        if self.is_degenerate():
+            print(
+                r"Degenerate ground state! Using non-degenerate perturbation theory for susceptibility not possible")
+            return
+
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
 
         fig = plt.figure(figsize=(10, 6))
@@ -984,6 +983,11 @@ class Hubbard:
         _s_up = self.s_up.value
         _s_down = self.s_down.value
         _n = self.n.value
+
+        if self.is_degenerate():
+            print(
+                r"Degenerate ground state! Using non-degenerate perturbation theory for susceptibility not possible")
+            return
 
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
 
