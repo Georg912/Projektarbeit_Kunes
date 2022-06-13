@@ -1,6 +1,8 @@
 jupyter
 jupyterlab
 matplotlib
+more-itertools
 numpy
+numba
 scipy
 seaborn
