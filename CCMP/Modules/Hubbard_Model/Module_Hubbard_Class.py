@@ -19,8 +19,9 @@ from cycler import cycler  # used for color cycles in mpl
 
 from .Module_Widgets import n_Slider, s_up_Slider, s_down_Slider
 from .Module_Widgets import u_Slider, t_Slider, u_range_Slider, t_range_Slider
-from .Module_Widgets import basis_index_Slider
-from .Module_Cache_Decorator import Cach  # used for caching functions
+from .Module_Widgets import basis_index_Slider, t_ij_inputfile_checkbox
+# used for caching functions
+from .Module_Cache_Decorator import Cach, CachedAttribute
 # # from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
 # # from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
 # # from Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText
@@ -33,6 +34,8 @@ import scipy.sparse.linalg as splin
 from fractions import Fraction
 from textwrap import fill
 from matplotlib.ticker import FormatStrFormatter
+from pathlib import Path
+import inspect
 
 
 @jit
@@ -123,6 +126,11 @@ class Hubbard:
         self.t_array = np.linspace(
             self.t_range.min, self.t_range.max, num=1 + int(dt), endpoint=True)
 
+        # Set all checkboxes
+        self.t_ij = t_ij_inputfile_checkbox
+        self.t_ij.value = False
+        self.t_ij.observe(self.on_change_t_ij, names="value")
+
     def Construct_Basis(self):
         """
         Return all possible m := nCr(n, s_up) * nCr(n, s_down) basis states for specific values of `n`, `s_up` and `s_down` by permuting one specific up an down state.
@@ -187,6 +195,7 @@ class Hubbard:
         self.basis_index.max = self.basis.shape[0] - 1
         self.hoppings = self.Allowed_Hoppings_H()
         self.Reset()
+        print("blub")
 
     def on_change_s_up(self, change):
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
@@ -203,6 +212,42 @@ class Hubbard:
             self.basis = self.Construct_Basis()
             self.basis_index.max = self.basis.shape[0] - 1
             self.Reset()
+
+    def on_change_t_ij(self, change):
+        self.Reset()
+
+    @staticmethod
+    def methods_with_decorator(cls, decoratorName="Cach"):
+        """
+        Returns a list of all methods of a class that are decorated with a specific decorator <decoratorName>.
+
+        Parameters
+        ----------
+        cls : class
+            Class to search for methods.
+        decoratorName : str
+            Name of the decorator to search for.
+
+        Returns
+        -------
+        methods : list
+            List of methods that are decorated with the decorator.
+        """
+        methods = []
+        sourcelines = inspect.getsourcelines(cls)[0]
+
+        # find `@decoratorName` in sourcelines => next line is target property
+        for i, line in enumerate(sourcelines):
+            if line.strip() == '@'+decoratorName:
+                # If method additionally uses `@jit` use the next but one line
+                if sourcelines[i+1].split('(')[0].strip() == '@jit':
+                    idx = i + 2
+                else:
+                    idx = i + 1
+
+                methods.append(
+                    sourcelines[i+1].split('def')[1].split('(')[0].strip())
+        return methods
 
     @Cach
     def up(self):
@@ -326,7 +371,32 @@ class Hubbard:
 
         NN_sign = np.sum(np.array([self.Sign_Matrix(_base, _base, i, j)
                                    for i, j in self.hoppings]), axis=0)
+
         NN_sign = np.where(NN_sign >= 1, 1, np.where(NN_sign <= -1, -1, 0))
+        return NN_hoppings * NN_sign
+
+    @Cach
+    @jit(forceobj=True)  # , cache=True)
+    def Ht_ij(self):
+        """
+        Calculates Hopping matrix Ht from the allowed hoppings in the Hamiltonian H. First all allowed hoppings `NN_hoppings` are calculated, then the total sign matrix `NN_sign` is calculated for each hopping. The resulting Hopping Hamiltonian `Ht` is then the product of `NN_sign` and `NN_hoppings`.
+
+        Note that this method uses an input file to specify the the hopping amplitudes, located in the 't_ij' folder.
+        """
+        _base = self.basis
+        _n = self.n.value
+        NN_hoppings = sp.cdist(_base, _base, metric="cityblock")
+        NN_hoppings = np.where(NN_hoppings == 2, 1, 0)
+
+        path = Path(__file__).parent / "t_ij"
+        _t_ij = np.loadtxt(path / f"n{_n}.txt", delimiter=",")
+
+        NN_sign = np.sum(np.array([_t_ij[i, j] * self.Sign_Matrix(_base, _base, i, j)
+                         for i in np.arange(_n) for j in np.arange(_n)]), axis=0)
+        NN_sign += np.sum(np.array([_t_ij[i - _n, j - _n] * self.Sign_Matrix(_base, _base, i, j)
+                                    for i in np.arange(_n, 2*_n) for j in np.arange(_n, 2*_n)]), axis=0)
+
+        # NN_sign = np.where(NN_sign > 0., 1, np.where(NN_sign < -0., -1, 0))
 
         return NN_hoppings * NN_sign
 
@@ -353,7 +423,10 @@ class Hubbard:
         t : float
                 hopping strength
         """
-        return t * self.Ht + u * self.Hu  # + np.eye(self.Hu.shape[0])*20
+        if self.t_ij.value == True:
+            return t * self.Ht_ij + u * self.Hu
+        else:
+            return t * self.Ht + u * self.Hu  # + np.eye(self.Hu.shape[0])*20
 
     def Show_H(self, u, t, **kwargs):
         """
@@ -383,9 +456,11 @@ class Hubbard:
         """
         Method to reset all cached properties (if they were already cached).
         """
-        cached_properties = ["Op_nn", "Ht", "Hu",
-                             "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "Chi_staggered", "All_Eigvals_and_Eigvecs", "ExpVal_SzkSzk"]
-        for prop in cached_properties:
+        # cached_properties = ["Op_nn", "Ht", "Hu",
+        #                      "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "Chi_staggered", "All_Eigvals_and_Eigvecs", "ExpVal_SzkSzk", "Ht_ij"]
+        # for prop in cached_properties:
+        print("test")
+        for prop in self.methods_with_decorator(self.__class__, "Cach"):
             self.__dict__.pop(prop, None)
 
     @Cach
@@ -1007,6 +1082,8 @@ class Hubbard:
 
         # For U=0 some combinations of n and s_up/s_down are more than twice degenerate, to not deal with these corner cases we just skip them completely
         plt.plot(u[1:], self.Chi[u_idx][1:].round(5), ".-")
+        # Has to be set after plotting, otherwise range [0,1]
+        plt.ylim(bottom=-0.1,)
         return fig
 
     def Plot_Chi_Staggered(self, **kwargs):
@@ -1121,7 +1198,7 @@ class Hubbard:
             plt.plot(u, S.round(2), ".-",
                      label=rf"$k = {{{labels[i]}}} \cdot \pi $")
 
-            # Has to be set after plotting, otherwise range [0,1]
+        # Has to be set after plotting, otherwise range [0,1]
         plt.ylim(bottom=-0.1,)
         plt.legend(bbox_to_anchor=(1.0, 1), loc="upper left", ncol=1)
         return fig
