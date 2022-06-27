@@ -120,3 +120,10 @@ t_Slider = widgets.FloatSlider(
 widgets.dlink((n_Slider, 'value'), (s_up_Slider, 'max'))
 widgets.dlink((n_Slider, 'value'), (s_down_Slider, 'max'))
 ################################
+
+t_ij_inputfile_checkbox = widgets.Checkbox(
+    value=False,
+    description=r"Use $t_{ij}$ input file",
+    style={'description_width': 'initial'},
+    layout=Layout(width="7cm"),
+    indent=False)
