@@ -215,6 +215,7 @@ class Hubbard:
 
     def on_change_t_ij(self, change):
         self.Reset()
+        pass
 
     @staticmethod
     def methods_with_decorator(cls, decoratorName="Cach"):
@@ -245,8 +246,8 @@ class Hubbard:
                 else:
                     idx = i + 1
 
-                methods.append(
-                    sourcelines[i+1].split('def')[1].split('(')[0].strip())
+                methods.append(sourcelines[idx].split(
+                    'def')[1].split('(')[0].strip())
         return methods
 
     @Cach
@@ -459,7 +460,6 @@ class Hubbard:
         # cached_properties = ["Op_nn", "Ht", "Hu",
         #                      "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "Chi_staggered", "All_Eigvals_and_Eigvecs", "ExpVal_SzkSzk", "Ht_ij"]
         # for prop in cached_properties:
-        print("test")
         for prop in self.methods_with_decorator(self.__class__, "Cach"):
             self.__dict__.pop(prop, None)
 
@@ -879,7 +879,7 @@ class Hubbard:
 
         return self.Calc_Coupling(Sz_staggered)
 
-    @ staticmethod
+    @staticmethod
     def find_indices_of_slider(array, range_slider):
         """
         Find indices of `array` that are within the range of the `range_slider`.
