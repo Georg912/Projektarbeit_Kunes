@@ -384,7 +384,7 @@ class Hubbard:
         Method to reset all cached properties (if they were already cached).
         """
         cached_properties = ["Op_nn", "Ht", "Hu",
-                             "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "Chi_staggered", "All_Eigvals_and_Eigvecs"]
+                             "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "Chi_staggered", "All_Eigvals_and_Eigvecs", "ExpVal_SzkSzk"]
         for prop in cached_properties:
             self.__dict__.pop(prop, None)
 
@@ -573,6 +573,18 @@ class Hubbard:
 
             return True if count[0] == 2 else False
 
+    def k_list(self):
+        """
+        Method to return the list of possible k-values to use for translation symmetry (Fourier transform), given by {2*pi*i*j / n | j in {0,...,n-1}} .
+
+        Returns
+        -------
+        k_list : nd_array(n,)
+                        array of k-values
+        """
+        _n = self.n.value
+        return np.exp(2 * np.pi * 1j / _n * np.arange(_n))
+
     @Cach
     def GS(self):
         """
@@ -633,16 +645,16 @@ class Hubbard:
         # np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
         a = np.einsum("ijk, kji -> i", self.GS, Op @ self.GS.T)
 
-        k = min(10, self.basis.shape[0] - 1)
-        if k > 0:
-            vals, vecs = splin.eigsh(
-                scipy.sparse.csr_matrix(self.H(0, 1)), k=k, which="SA")
-            vals, counts = np.unique(vals.round(5), return_counts=True)
-            vecs1 = vecs[np.newaxis, :, :counts[0]] / np.sqrt(counts[0])
-            b = np.einsum("ijk, kji -> i", vecs1, Op @ vecs1.T)[0]
-        else:
-            b = Op.item(0, 0)
-        a[0] = b
+        # k = min(10, self.basis.shape[0] - 1)
+        # if k > 0:
+        #     vals, vecs = splin.eigsh(
+        #         scipy.sparse.csr_matrix(self.H(0, 1)), k=k, which="SA")
+        #     vals, counts = np.unique(vals.round(5), return_counts=True)
+        #     vecs1 = vecs[np.newaxis, :, :counts[0]] / np.sqrt(counts[0])
+        #     b = np.einsum("ijk, kji -> i", vecs1, Op @ vecs1.T)[0]
+        # else:
+        #     b = Op.item(0, 0)
+        a[0] = a[1] - (a[2] - a[1])
         return a
 
     def Op_n_up(self, i):
@@ -684,6 +696,23 @@ class Hubbard:
         SzSz : ndarray (m, m)
         """
         return self.Op_Sz(i) @ self.Op_Sz(j)
+
+    def Op_Szk(self, k):
+        """
+        Calculate the reciprocal spin-operator in z-direction `Szk`
+
+        Parameters
+        ----------
+        k : float
+            k-value at which to evaluate the operator
+
+        Returns
+        -------
+        Szk : ndarray (m, m)
+        """
+        l = self.k_list()**k
+        _n = self.n.value
+        return np.sum([self.Op_Sz(i) * l[i] for i in np.arange(_n)], axis=0)
 
     @Cach
     def ExpVal_nn_mean(self):
@@ -728,6 +757,21 @@ class Hubbard:
         expval_SzSz : list[ndarray(m,)]
         """
         return [self.Exp_Val_0(self.Op_SzSz(0, i)) for i in np.arange(self.n.value // 2 + 1)]
+
+    @Cach
+    def ExpVal_SzkSzk(self):
+        """
+        Return the cached ground state expectation value of the reciprocal-space spin-spin correlation operator `Sz_k Sz_k'` for all relevant correlation sites (i.e. those that are non-zero, in other words, were k' = -k).
+
+        Return
+        ------
+        expval_SzkSzk : list[ndarray(m,)]
+        """
+        _n = self.n.value
+        # number_of_unique_correlations
+        _l = np.floor(_n / 2) + 1
+
+        return [np.real(self.Exp_Val_0(self.Op_Szk(i) @ self.Op_Szk((_n-i) % _n))) for i in np.arange(_l)]
 
     @Cach
     def Chi(self):
@@ -775,9 +819,9 @@ class Hubbard:
         Returns
         -------
         s_idx : ndarray
-                indices of `array` that are within the range of the `range_slider`
+            indices of `array` that are within the range of the `range_slider`
         s_arr : ndarray
-                        array of values that are within the range of the `range_slider`
+            array of values that are within the range of the `range_slider`
         """
         s_min = range_slider.value[0]
         s_max = range_slider.value[1]
@@ -1034,3 +1078,50 @@ class Hubbard:
             shifted_eigvals = eig_vals[:, 1:] - eig_val0[:, None]
 
             return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], Op @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
+
+    def Plot_ExpVal_SzkSzk(self, **kwargs):
+        """
+        Method to plot the expectation value of the reciprocal-space spin-spin correlation operator `Sz_k Sz_-k` for u in [u_min, u_max] and t=1.
+
+        Returns
+        -------
+
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+                used to add sliders and other widgets to the displayed output
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+
+        u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
+        SzSz_kk = [S[u_idx] for S in self.ExpVal_SzkSzk]
+
+        SzSz_kk_str = r"$\left\langle S_z(k) S_z(-k) \right\rangle $"
+
+        color = mpl.cm.tab10(np.arange(0, 10))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+        fig = plt.figure(figsize=(10, 6))
+
+        title = fill(
+            r"Reciprocal-space spin-spin correlation $\langle$$S_z(k)$$S_z(-k)$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        plt.title(rf"{title}")
+        plt.xlabel(r"$U$")
+        plt.ylabel(SzSz_kk_str)
+        plt.grid()
+
+        labels = [str(Fraction(2 / _n * i).limit_denominator(100))
+                  for i in np.arange(np.floor(_n / 2) + 1)]
+
+        for i, S in enumerate(SzSz_kk):
+            plt.plot(u, S.round(2), ".-",
+                     label=rf"$k = {{{labels[i]}}} \cdot \pi $")
+
+            # Has to be set after plotting, otherwise range [0,1]
+        plt.ylim(bottom=-0.1,)
+        plt.legend(bbox_to_anchor=(1.0, 1), loc="upper left", ncol=1)
+        return fig
