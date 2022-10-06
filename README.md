@@ -43,7 +43,7 @@ After installing `Python` and thus `PIP` one can use
     $ pip install -r requirements.txt  --upgrade
 to install the required Modules.
 
-One can now open the `jupyter` notebooks (exactly like in linus) via
+One can now open the `jupyter` notebooks (exactly like in linux) via
 
     $ jupyter lab <notebook_name>.ipynb
     # e.g  jupyter lab Dynamical_Systems.ipynb
