@@ -21,7 +21,7 @@ from .Module_Widgets import n_Slider, s_up_Slider, s_down_Slider
 from .Module_Widgets import u_Slider, t_Slider, u_range_Slider, t_range_Slider
 from .Module_Widgets import basis_index_Slider, t_ij_inputfile_checkbox
 # used for caching functions
-from .Module_Cache_Decorator import Cach, CachedAttribute
+from .Module_Cache_Decorator import Cach  # , CachedAttribute
 # # from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
 # # from Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
 # # from Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText
@@ -195,7 +195,6 @@ class Hubbard:
         self.basis_index.max = self.basis.shape[0] - 1
         self.hoppings = self.Allowed_Hoppings_H()
         self.Reset()
-        print("blub")
 
     def on_change_s_up(self, change):
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
@@ -220,12 +219,12 @@ class Hubbard:
     @staticmethod
     def methods_with_decorator(cls, decoratorName="Cach"):
         """
-        Returns a list of all methods of a class that are decorated with a specific decorator <decoratorName>.
+        Returns a list of all methods of a class and its parent classes that are decorated with a specific decorator <decoratorName>.
 
         Parameters
         ----------
         cls : class
-            Class to search for methods.
+            Class (and parent classes) to search for methods.
         decoratorName : str
             Name of the decorator to search for.
 
@@ -235,19 +234,23 @@ class Hubbard:
             List of methods that are decorated with the decorator.
         """
         methods = []
-        sourcelines = inspect.getsourcelines(cls)[0]
+        cls_list = inspect.getmro(cls)
+        for c in cls_list:
+            if c in (type, object):
+                continue
+            sourcelines = inspect.getsourcelines(c)[0]
 
-        # find `@decoratorName` in sourcelines => next line is target property
-        for i, line in enumerate(sourcelines):
-            if line.strip() == '@'+decoratorName:
-                # If method additionally uses `@jit` use the next but one line
-                if sourcelines[i+1].split('(')[0].strip() == '@jit':
-                    idx = i + 2
-                else:
-                    idx = i + 1
+            # find `@decoratorName` in sourcelines => next line is target property
+            for i, line in enumerate(sourcelines):
+                if line.strip() == '@'+decoratorName:
+                    # If method additionally uses `@jit` use the next but one line
+                    if sourcelines[i+1].split('(')[0].strip() == '@jit':
+                        idx = i + 2
+                    else:
+                        idx = i + 1
 
-                methods.append(sourcelines[idx].split(
-                    'def')[1].split('(')[0].strip())
+                    methods.append(sourcelines[idx].split(
+                        'def')[1].split('(')[0].strip())
         return methods
 
     @Cach
@@ -457,9 +460,6 @@ class Hubbard:
         """
         Method to reset all cached properties (if they were already cached).
         """
-        # cached_properties = ["Op_nn", "Ht", "Hu",
-        #                      "Eigvals_Hu", "Eigvals_Ht", "GS", "Op_nn_mean", "up", "down", "ExpVal_nn_mean", "ExpVal_Sz", "ExpVal_SzSz_ii", "ExpVal_SzSz_ij", "Chi", "Chi_staggered", "All_Eigvals_and_Eigvecs", "ExpVal_SzkSzk", "Ht_ij"]
-        # for prop in cached_properties:
         for prop in self.methods_with_decorator(self.__class__, "Cach"):
             self.__dict__.pop(prop, None)
 
@@ -851,7 +851,7 @@ class Hubbard:
     @Cach
     def Chi(self):
         """
-        Return the local susceptibility `chi` = Sum_{i=1}^{n} Sum_{m>g} |<psi_m|S_iz|psi_g>|^2 / (E_m - E_g) of the system.
+        Return the average local susceptibility `chi` = 1/n * Sum_{i=1}^{n} Sum_{m>g} |<psi_m|S_iz|psi_g>|^2 / (E_m - E_g) of the system.
 
         Returns
         -------
@@ -1087,7 +1087,7 @@ class Hubbard:
         return fig
 
     def Plot_Chi_Staggered(self, **kwargs):
-        """x
+        """
         Method to plot the staggered, magnetic susceptibility chi for u in [u_min, u_max] and t=1.
 
         Returns
@@ -1126,6 +1126,13 @@ class Hubbard:
 
     @Cach
     def All_Eigvals_and_Eigvecs(self):
+        """ 
+        Method to calculate all m eigenvalues and eigenvectors for all U in [u_min, u_max] and t=1.
+
+        Returns
+        -------
+        eigvals, eigvecs : list of numpy.ndarray with shape (len(u_array), m)
+        """
         _H = np.array([self.H(u, 1) for u in self.u_array])
         return np.linalg.eigh(_H)
 
