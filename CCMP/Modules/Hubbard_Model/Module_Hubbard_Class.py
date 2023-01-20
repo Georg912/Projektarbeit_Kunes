@@ -20,6 +20,7 @@ from cycler import cycler  # used for color cycles in mpl
 from .Module_Widgets import n_Slider, s_up_Slider, s_down_Slider
 from .Module_Widgets import u_Slider, t_Slider, u_range_Slider, t_range_Slider
 from .Module_Widgets import basis_index_Slider, t_ij_inputfile_checkbox
+from .Module_Widgets import u1_Slider, u1_checkbox
 # used for caching functions
 from .Module_Cache_Decorator import Cach  # , CachedAttribute
 # # from Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
@@ -126,10 +127,18 @@ class Hubbard:
         self.t_array = np.linspace(
             self.t_range.min, self.t_range.max, num=1 + int(dt), endpoint=True)
 
+        self.u1 = u1_Slider
+        self.u1.layout.visibility = "hidden"
+        self.u1.observe(self.on_change_u1, names="value")
+        self.u1_prev = self.u1.value
+
         # Set all checkboxes
         self.t_ij = t_ij_inputfile_checkbox
         self.t_ij.value = False
         self.t_ij.observe(self.on_change_t_ij, names="value")
+
+        self.u1_checkbox = u1_checkbox
+        self.u1_checkbox.observe(self.on_change_u1_checkbox, names="value")
 
     def Construct_Basis(self):
         """
@@ -216,6 +225,20 @@ class Hubbard:
         self.Reset()
         pass
 
+    def on_change_u1(self, change):
+        self.Reset()
+        print("test")
+        pass
+
+    def on_change_u1_checkbox(self, change):
+        if self.u1_checkbox.value == True:
+            self.u1.layout.visibility = "visible"
+            self.u1.value = self.u1_prev
+        else:
+            self.u1.layout.visibility = "hidden"
+            self.u1_prev = self.u1.value
+            self.u1.value = 0
+
     @staticmethod
     def methods_with_decorator(cls, decoratorName="Cach"):
         """
@@ -287,6 +310,19 @@ class Hubbard:
         nn : ndarray (m, m)
         """
         return np.diag(np.sum(self.up * self.down, axis=1))
+
+    @Cach
+    def Op_nn_nearest_neighbour(self):
+        """
+        Return the sum of all double occupation number operators nearest neighbour sites = sum [(n_i_up + n_i_down) * (n_i+1_up + n_i+1_down)] , which is diagonal in the occupation number basis
+
+        Returns
+        -------
+        nn : ndarray (m, m)
+        """
+        _n = self.n.value
+
+        return np.sum([(self.Op_n_up(i) + self.Op_n_down(i)) @ (self.Op_n_up((i+1) % _n) + self.Op_n_down((i+1) % _n)) for i in np.arange(_n)], axis=0)
 
     @jit(forceobj=True)  # otherwise error message
     def Allowed_Hoppings_H(self):
@@ -407,32 +443,45 @@ class Hubbard:
     @Cach
     def Hu(self):
         """
-        Return cached on-site interaction Hamiltonian H_u given exactly by the occupation number operator `n`.
+        Return cached on-site interaction Hamiltonian H_u given exactly by the occupation number operator `nn`.
 
         Returns
         -------
         Hu : ndarray (m, m)
-        on-site Interaction Hamiltonian
+            on-site Interaction Hamiltonian
         """
         return self.Op_nn
 
-    def H(self, u, t):
+    @Cach
+    def Hu1(self):
         """
-        Compute the system's total Hamiltonian H = u*Hu + t*Ht for given prefactors `u` and `t`.
+        Return cached nearest-neighbour-site interaction Hamiltonian H_u1 given exactly by the occupation number operator `nn_nearest_neighbour`.
+
+        Returns
+        -------
+        Hu : ndarray (m, m)
+            on-site Interaction Hamiltonian
+        """
+        return self.Op_nn_nearest_neighbour
+
+    def H(self, u, t, u1):
+        """
+        Compute the system's total Hamiltonian H = u*Hu + t*Ht + u1 * Hu1 for given prefactors `u`, `t` and possibly `u1`.
 
         Parameters
         ----------
         u : float
-                on-site interaction strength
+            on-site interaction strength
         t : float
-                hopping strength
+            hopping strength
+        u1 : float
+            nearest-neighbour-site interaction strength
         """
         if self.t_ij.value == True:
             return t * self.Ht_ij + u * self.Hu
-        else:
-            return t * self.Ht + u * self.Hu  # + np.eye(self.Hu.shape[0])*20
+        return t * self.Ht + u * self.Hu + u1 * self.Hu1
 
-    def Show_H(self, u, t, **kwargs):
+    def Show_H(self, u, t, u1, **kwargs):
         """
         Method to print total Hamiltonian H = u*Hu + t*Ht and the dimension of H
 
@@ -454,7 +503,7 @@ class Hubbard:
         """
         dimension = self.basis_index.max + 1
         print(f"Dimension of H = {dimension} x {dimension}")
-        print(f"H = \n{self.H(u,t)}")
+        print(f"H = \n{self.H(u, t, u1)}")
 
     def Reset(self):
         """
@@ -474,7 +523,8 @@ class Hubbard:
         vals : ndarray (len(u),m)
                         Eigenvalues of the on-site interaction Hamiltonian
         """
-        vals = [np.linalg.eigvalsh(self.H(u, 1)) for u in self.u_array]
+        _u1 = self.u1.value
+        vals = [np.linalg.eigvalsh(self.H(u, 1, _u1)) for u in self.u_array]
         return np.array(vals)
 
     def Plot_Eigvals_Hu(self, **kwargs):
@@ -527,7 +577,8 @@ class Hubbard:
         vals : ndarray (len(u),m)
                         Eigenvalues of the hopping Hamiltonian
         """
-        vals = [np.linalg.eigvalsh(self.H(10, t)) for t in self.t_array]
+        _u1 = self.u1.value
+        vals = [np.linalg.eigvalsh(self.H(10, t, _u1)) for t in self.t_array]
         return np.array(vals)
 
     def Plot_Eigvals_Ht(self, **kwargs):
@@ -586,10 +637,11 @@ class Hubbard:
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
         u_max = self.u_range.value[1]
         t_max = self.t_range.value[1]
+        _u1 = self.u1.value
 
-        eig_t = np.array([np.linalg.eigvalsh(self.H(u_max, t))
+        eig_t = np.array([np.linalg.eigvalsh(self.H(u_max, t, _u1))
                          for t in self.t_array])
-        eig_u = np.array([np.linalg.eigvalsh(self.H(u, t_max))
+        eig_u = np.array([np.linalg.eigvalsh(self.H(u, t_max, _u1))
                          for u in self.u_array])
 
         last_eigvals_t = eig_t[-1, :]
@@ -669,17 +721,20 @@ class Hubbard:
         -------
         eig_vec : ndarray (len(u), m, k)
         """
+        _u1 = self.u1.value
         # sparse method does not work for matrixes with dimension 1x1
         if self.basis.shape[0] == 1:
             eig_vecs = np.ones((self.u_array.size, 1, 1))
         # deal with degenerate ground state
         elif self.is_degenerate():
-            _H = [scipy.sparse.csr_matrix(self.H(u, 2)) for u in self.u_array]
+            _H = [scipy.sparse.csr_matrix(self.H(u, 2, _u1))
+                  for u in self.u_array]
             eig_vecs = np.array([splin.eigsh(h, k=2, which="SA")[1]
                                  for h in _H]) / np.sqrt(2)
         # deal with non-degenerate ground state
         else:
-            _H = [scipy.sparse.csr_matrix(self.H(u, 2)) for u in self.u_array]
+            _H = [scipy.sparse.csr_matrix(self.H(u, 2, _u1))
+                  for u in self.u_array]
             eig_vecs = np.array([splin.eigsh(h, k=1, which="SA")[1]
                                  for h in _H])
 
@@ -736,6 +791,11 @@ class Hubbard:
         """
         Calculate the spin-up occupation number operator `n_up` for site i.
 
+        Parameters
+        ----------
+        i : int
+            Site index
+
         Returns
         -------
         n_up : ndarray (m, m)
@@ -745,6 +805,11 @@ class Hubbard:
     def Op_n_down(self, i):
         """
         Calculate the spin-down occupation number operator `n_down` for site i.
+
+        Parameters
+        ----------
+        i : int
+            Site index
 
         Returns
         -------
@@ -1133,7 +1198,8 @@ class Hubbard:
         -------
         eigvals, eigvecs : list of numpy.ndarray with shape (len(u_array), m)
         """
-        _H = np.array([self.H(u, 1) for u in self.u_array])
+        _u1 = self.u1.value
+        _H = np.array([self.H(u, 1, _u1) for u in self.u_array])
         return np.linalg.eigh(_H)
 
     def Calc_Coupling(self, Op):

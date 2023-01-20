@@ -117,6 +117,19 @@ t_Slider = widgets.FloatSlider(
     readout_format='.1f',
 )
 ################################
+u1_Slider = widgets.FloatSlider(
+    value=2,
+    min=0,
+    max=5,
+    step=0.01,
+    description=r'$U_1=$',
+    continuous_update=False,
+    orientation='horizontal',
+    style={'description_width': 'initial'},
+    readout=True,
+    readout_format='.2f',
+)
+################################
 widgets.dlink((n_Slider, 'value'), (s_up_Slider, 'max'))
 widgets.dlink((n_Slider, 'value'), (s_down_Slider, 'max'))
 ################################
@@ -124,6 +137,13 @@ widgets.dlink((n_Slider, 'value'), (s_down_Slider, 'max'))
 t_ij_inputfile_checkbox = widgets.Checkbox(
     value=False,
     description=r"Use $t_{ij}$ input file",
+    style={'description_width': 'initial'},
+    layout=Layout(width="7cm"),
+    indent=False)
+
+u1_checkbox = widgets.Checkbox(
+    value=False,
+    description=r"Use nearest neighbour hopping $U_1$",
     style={'description_width': 'initial'},
     layout=Layout(width="7cm"),
     indent=False)

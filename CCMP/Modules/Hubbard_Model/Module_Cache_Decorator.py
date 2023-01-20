@@ -23,19 +23,3 @@ class CachedAttribute(object):
 
 def Cach(func):
     return functools.wraps(func)(CachedAttribute(func))
-
-
-# TODO: rename Cach into Cache
-
-  # def Eigvecs_Hu(self):
-    #     # H = [scipy.sparse.csr_matrix(self.H(u, 1)) for u in self.u_array]
-    #     H = np.array([self.H(u, 1) for u in self.u_array])
-    #     eigvals, eigvecs = np.linalg.eigh(H)
-    #     # idx = np.argsort(eigvals, axis=1)
-    #     # print(eigvals.shape, eigvecs.shape)
-    #     # print(np.round(eigvals), "\n", np.round(eigvecs))
-    #     # eigvals = np.take_along_axis(eigvals, idx, axis=1)
-    #     # eigvecs = np.take_along_axis(eigvecs, idx[..., None], axis=1)
-    #     # eigvecs = eigvecs[:, ind, :]  # second axis !!
-    #     return eigvecs[..., 0]
-    #     # return H
