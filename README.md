@@ -2,12 +2,11 @@
 
 supervised by Jan Kunes
 
-# Table of Contents
+<!-- TOC -->
 
 -   [Projektarbeit by Georg FJ Hufnagl](#projektarbeit-by-georg-fj-hufnagl)
--   [Table of Contents](#table-of-contents)
 -   [Getting Started](#getting-started)
-    -   [Ubuntu Linux](#ubuntu-linux)
+    -   [Ubuntu and other Linux Distributions](#ubuntu-and-other-linux-distributions)
     -   [Mac OS](#mac-os)
     -   [Windows](#windows)
 -   [Errors and Bugs](#errors-and-bugs)
@@ -16,27 +15,29 @@ supervised by Jan Kunes
 
 # Getting Started
 
-To use the jupyter notebooks provided in this repository one needs `Python` version 3.6 or higher and also has to download certain Modules (like `Numpy`) to run the code. The required Modules are listed in the `requirements.txt` file.
+To use the jupyter notebooks provided in this repository one needs `Python` version 3.7 or higher, but less than 3.11 (Due to `Numba`, a JIT compiler Module to speed up code, currently not available for `Python 3.11`) and also has to download certain Modules (like `Numpy`) to run the code. The required Modules are listed in the `requirements.txt` file.
 
 After finishing the setup for your OS you can start a jupyter notebook server (see [Ubuntu (Linux)](#ubuntu-linux), [Mac OS](#mac-os) or [Windows](#windows) sections below).
 
 The relevant notebooks for playing around are located in the `CCMP/` folder and are named `<number>_<topic_name>.ipynb`. The source code for the algorithms is located in the `Modules` folder.
 
-## Ubuntu (Linux)
+## Ubuntu (and other Linux Distributions)
 
-Normally, in Ubuntu 18.04 and higher `Python3.6` or newer should be preinstalled. One can check by calling:
+Normally, in Ubuntu 20.04 and higher `Python3.8` or newer should be preinstalled. One can check by calling:
 
     $ python --version
     # or
     $ python3 --version
-    # which might return: Python 3.6
+    # which might return: Python 3.8
 
 If a lower version is installed, call:
 
     $ sudo apt-get update
-    $ sudo apt-get install python3.6 # or higher
+    $ sudo apt-get install python3.8 # or higher
 
-And check again the version. To install the required Modules simply run:
+And check again the version. If no newer version is available, google how to install higher versions, which should lead to a `deadsnake PPA` or write me an [e-mail](https://github.com/Georg912/Projektarbeit_Kunes/issues) and I can try to help.
+
+To install the required Modules simply run:
 
     $ pip install -r requirements.txt  --upgrade
 
@@ -91,4 +92,4 @@ Or, if the `PATH` variables have been set, a "normal" `cmd` prompt can also exec
 
 # Errors and Bugs
 
-If you encounter any errors or bugs, please open an issue on the [GitHub repository](https://github.com/Georg912/Projektarbeit_Kunes/issues) or contact me or Prof. Kunes directly via email .
+If you encounter any errors or bugs, please open an issue on the [GitHub repository](https://github.com/Georg912/Projektarbeit_Kunes/issues) or contact me or Prof. Kunes directly via e-mail .
