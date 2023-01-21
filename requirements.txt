@@ -1,4 +1,4 @@
-ipywidgets<=7.7.2	#version 8 not supported in vscode jupyter
+ipywidgets<=7.7.2	#version 8 not supported in `vscode jupyter` and `jupyter lab` only in `jupyter`
 jupyter
 jupyterlab
 matplotlib
