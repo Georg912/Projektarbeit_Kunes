@@ -204,7 +204,8 @@ class DynamicalHubbard(Hubbard):
         plt.title(rf"{title}")
         plt.xlabel(r"$\omega$")
         plt.ylabel(G_SzSz_str)
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         for i in np.arange(_n // 2 + 1):
             plt.plot(w, G_Szi_Szj[i],

@@ -4,7 +4,6 @@ import scipy
 import scipy.spatial.distance as sp
 import scipy.linalg as sp_la
 import numpy as np
-import numpy.typing as npt
 import ipywidgets as widgets
 import time
 import matplotlib.pyplot as plt  # Plotting
@@ -273,7 +272,7 @@ class Hubbard:
             self.u1.value = 0
 
     @staticmethod
-    def methods_with_decorator(cls, decoratorName="Cach") -> list[str]:
+    def methods_with_decorator(cls, decoratorName="Cach"):
         """
         Returns a list of all methods of a class and its parent classes that are decorated with a specific decorator <decoratorName> .
 
@@ -310,7 +309,7 @@ class Hubbard:
         return methods
 
     @Cach
-    def up(self) -> npt.NDArray[np.float]:
+    def up(self):
         """
         Return all possible spin up states.
 
@@ -322,7 +321,7 @@ class Hubbard:
         return self.basis[:, : self.n.value]
 
     @Cach
-    def down(self) -> npt.NDArray[np.float]:
+    def down(self):
         """
         Return all possible spin down states.
 
@@ -334,7 +333,7 @@ class Hubbard:
         return self.basis[:, self.n.value:]
 
     @Cach
-    def Op_nn(self) -> npt.NDArray[np.float]:
+    def Op_nn(self):
         """
         Return the double occupation number operator `nn`, which is diagonal in the occupation number basis
 
@@ -593,7 +592,8 @@ class Hubbard:
             f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the on-site interaction strength $U$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$")
         plt.xlabel(r"$U$")
         plt.ylabel(r"Eigenvalue(s)")
-        plt.grid()
+        plt.grid(which="both", axis="both",
+                 linestyle="--", color="black", alpha=0.4)
         axes = plt.plot(u, eig_u, ".-")
 
         for idx, num in enumerate(np.cumsum(uniq[1])):
@@ -653,7 +653,8 @@ class Hubbard:
             f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the hopping amplitude $t$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and on-site interaction $U=10$")
         plt.xlabel(r"$t$")
         plt.ylabel(r"Eigenvalue(s)")
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
         axes = plt.plot(t, eig_t, ".-")
 
         for idx, num in enumerate(np.cumsum(uniq[1])):
@@ -1057,7 +1058,8 @@ class Hubbard:
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(nn_str)
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         plt.plot(u, nn.round(4), ".-", label=nn_str)
         plt.plot(u, (nn_max * np.ones(u.shape)).round(4), "--",
@@ -1111,7 +1113,8 @@ class Hubbard:
         plt.xlabel(r"$U$")
         plt.ylabel(
             r"Expectation value $\left\langle \hat O \right\rangle $")
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         plt.plot(u, Sz, ".-", label=f"{Sz_str}")
         plt.plot(u, Sz2, ".-", label=f"{Sz2_str}")
@@ -1153,7 +1156,8 @@ class Hubbard:
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(SzSz_str)
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         for i in np.arange(_n // 2 + 1):
             plt.plot(u, SzSz_ij[i], ".-",
@@ -1195,7 +1199,8 @@ class Hubbard:
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(r"$\chi_\mathrm{loc}$")
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         # For U=0 some combinations of n and s_up/s_down are more than twice degenerate, to not deal with these corner cases we just skip them completely
         plt.plot(u[1:], self.Chi[u_idx][1:].round(5), ".-")
@@ -1236,7 +1241,8 @@ class Hubbard:
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(r"$\chi_\mathrm{staggered}$")
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         plt.plot(u[1:], self.Chi_staggered[u_idx][1:].round(5), ".-")
         return fig
@@ -1314,7 +1320,8 @@ class Hubbard:
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(SzSz_kk_str)
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         labels = [str(Fraction(2 / _n * i).limit_denominator(100))
                   for i in np.arange(np.floor(_n / 2) + 1)]

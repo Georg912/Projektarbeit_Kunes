@@ -28,7 +28,7 @@ mpl.rcParams['text.usetex'] = True
 class Hopping:
 
     def __init__(self, n=6):
-        #n_Slider.value = n
+        # n_Slider.value = n
         self.n = n_Slider
         self.n.observe(self.on_change_n)
 
@@ -136,7 +136,7 @@ class Hopping:
         self.T = _T
         return
     # take care of the values not on the lower and upper main diagonal
-        #H[[0, n-1], [n-1, 0]] = 1
+        # H[[0, n-1], [n-1, 0]] = 1
 
     def AddHop(self):
         if self.pbc_checkbox.value == True:
@@ -243,7 +243,8 @@ class Hopping:
             f"Markov evolution for graph with $n={_n}$ sites, with initial state {state}")
         plt.xlabel(r"Number of iterations $n_{\mathrm{its}}$")
         plt.ylabel(r"Probability of finding particle at site $i$")
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         # Ensure color order is consistent with site number
         mpl.rcParams['axes.prop_cycle'] = cycler(
@@ -333,7 +334,8 @@ class Hopping:
             f"QM evolution for graph with $n={_n}$ sites, with initial state {state}")
         plt.xlabel(r"Number of iterations $n_{\mathrm{its}}$")
         plt.ylabel(r"Probability of finding particle at site $i$")
-        plt.grid()
+        plt.grid(which="both", axis="both", linestyle="--",
+                 color="black", alpha=0.4)
 
         mpl.rcParams['axes.prop_cycle'] = cycler(
             "color", plt.cm.get_cmap("tab10").reversed().colors[-_n:])

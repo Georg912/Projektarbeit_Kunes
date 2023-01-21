@@ -19,7 +19,7 @@ from cycler import cycler  # used for color cycles in mpl
 def Time_Evolution_Operator(n=6, t=0.1):
     '''TODO: write documentation'''
     H = Hopping_Matrix(n)
-    #H = Transfer_Matrix(n=n, x=t, x2=t2)
+    # H = Transfer_Matrix(n=n, x=t, x2=t2)
     return expm(-1j * t * H)
 
 ###########################################################################################################
@@ -55,7 +55,8 @@ def Plot_QM_Evolution(state=[1, 0, 0, 0, 0, 0], n_its=400, **kwargs):
         f"Qm evolution of the $n={n}$-ring with initial state {state} and $p_1 = {kwargs.get('p1', 0.1)}$")
     plt.xlabel(r"Number of iterations $n_{\mathrm{its}}$")
     plt.ylabel(r"Probability of finding particle at site $i$")
-    plt.grid()
+    plt.grid(which="both", axis="both", linestyle="--",
+             color="black", alpha=0.4)
 
     mpl.rcParams['axes.prop_cycle'] = cycler(
         "color", plt.cm.get_cmap("tab10").reversed().colors[-n:])
@@ -92,7 +93,7 @@ def Calc_QM_with_Eigenstates(state=[1, 0, 0, 0, 0, 0], n_its=50, **kwargs):
         c_n = np.einsum("i, ij -> j", np.conj(state), eig_vecs)
         psi_t = np.einsum("j, kj -> k",  (c_n * np.exp(-1.j *
                           its * kwargs.get("t", 0.1) * eig_vals)), eig_vecs)
-        #psi_t = eig_vecs @(c_n * np.exp(-1j * its * kwargs.get("t", 0.1) * eig_vals))
+        # psi_t = eig_vecs @(c_n * np.exp(-1j * its * kwargs.get("t", 0.1) * eig_vals))
         observations.append(psi_t)
     return np.array(observations)
 
@@ -109,7 +110,8 @@ def Plot_QM_with_Eigenstates(state=[1, 0, 0, 0, 0, 0], n_its=50, **kwargs):
         f"QM evolution of the $n={n}$-ring with initial state {state} using eigenbasis of $H$, $p_1 = {kwargs.get('p1', 0.1)}$")
     plt.xlabel(r"Number of iterations $n_{\mathrm{its}}$")
     plt.ylabel(r"Probability of finding particle at site $i$")
-    plt.grid()
+    plt.grid(which="both", axis="both", linestyle="--",
+             color="black", alpha=0.4)
 
     mpl.rcParams['axes.prop_cycle'] = cycler(
         "color", plt.cm.get_cmap("tab10").reversed().colors[-n:])
