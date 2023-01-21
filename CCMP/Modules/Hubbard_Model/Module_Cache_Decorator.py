@@ -1,4 +1,4 @@
-# Module whos sole purpose is to define the `@Cach` decorator. This enables methods to be use like class atributes, i.e. with the cls.attribute syntax, evalutes the attribute the first time it is invoked, and then caches the result. Thus getting rid of reevaluating expensive calculations again.
+# Module whos sole purpose is to define the `@Cach` decorator. This enables methods to be used like class atributes, i.e. with the cls.attribute syntax, evalutes the attribute the first time it is invoked, and then caches the result. Thus getting rid of reevaluating expensive calculations again.
 
 import functools
 
