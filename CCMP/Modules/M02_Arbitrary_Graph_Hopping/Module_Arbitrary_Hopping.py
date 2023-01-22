@@ -11,10 +11,10 @@ from distutils.spawn import find_executable
 import matplotlib.pyplot as plt  # Plotting
 import matplotlib as mpl
 from cycler import cycler  # used for color cycles in mpl
-from ..General.Module_Widgets_and_Sliders import n_Slider, checkbox
-from ..General.Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
-from ..General.Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
-from ..General.Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText
+from ..M00_General.Module_Widgets_and_Sliders import n_Slider, checkbox
+from ..M00_General.Module_Widgets_and_Sliders import button_to_add, button_to_undo, button_to_reset, button_to_show
+from ..M00_General.Module_Widgets_and_Sliders import i_IntText, j_IntText, p_BoundedFloatText
+from ..M00_General.Module_Widgets_and_Sliders import checkbox_periodic_boundary, p1_BoundedFloatText, p2_BoundedFloatText, p3_BoundedFloatText
 from scipy.sparse import diags
 
 mpl.rcParams['text.usetex'] = True

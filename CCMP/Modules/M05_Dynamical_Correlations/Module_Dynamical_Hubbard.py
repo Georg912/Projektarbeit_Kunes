@@ -1,5 +1,5 @@
-from ..Hubbard_Model.Module_Hubbard_Class import Hubbard
-from ..Hubbard_Model.Module_Cache_Decorator import Cach
+from ..M04_Hubbard_Model.Module_Hubbard_Class import Hubbard
+from ..M04_Hubbard_Model.Module_Cache_Decorator import Cach
 from .Module_Widgets import u25_Slider, omega_range_Slider, delta_Slider
 
 import matplotlib.pyplot as plt  	# Plotting

@@ -6,10 +6,10 @@ from ipywidgets import Layout
 import numpy as np
 from IPython.display import clear_output
 from .Module_Utilities import check_if_int
-from ..Gauge_Symmetry.Module_Symmetry_and_Gauge import Hopping_Matrix_with_Phase as H
-from ..Gauge_Symmetry.Module_Symmetry_and_Gauge import Right_Translation_Matrix as T
-from ..Gauge_Symmetry.Module_Symmetry_and_Gauge import Magnetic_Flux_Matrix as M
-from ..Gauge_Symmetry.Module_Symmetry_and_Gauge import Reflection_Matrix as R
+from ..M03_Gauge_Symmetry.Module_Symmetry_and_Gauge import Hopping_Matrix_with_Phase as H
+from ..M03_Gauge_Symmetry.Module_Symmetry_and_Gauge import Right_Translation_Matrix as T
+from ..M03_Gauge_Symmetry.Module_Symmetry_and_Gauge import Magnetic_Flux_Matrix as M
+from ..M03_Gauge_Symmetry.Module_Symmetry_and_Gauge import Reflection_Matrix as R
 
 out = widgets.Output()
 ###########################################################################################################
@@ -125,10 +125,10 @@ def transform(inp):
     # with output:
     # print(inp)
     # print(t.get_state)
-    #print(Initial_State.options,  inp, type(inp))
-    #print(Initial_State.options[0],  inp, type(inp))
+    # print(Initial_State.options,  inp, type(inp))
+    # print(Initial_State.options[0],  inp, type(inp))
     inp = list(map(check_if_int, inp.strip('][').split(',')))
-    #print(Initial_State.value, type(Initial_State.value), inp, type(inp))
+    # print(Initial_State.value, type(Initial_State.value), inp, type(inp))
     # print("test")
     # Avoid duplicate entries in `Initial_State.options'
     if inp not in Initial_State.options:

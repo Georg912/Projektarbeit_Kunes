@@ -3,7 +3,7 @@
 
 import numpy as np
 from scipy.sparse import diags  # Used for banded matrices
-from ..General.Module_Utilities import rename, print_isreal, Sorted_Eig, Eig, is_unique
+from ..M00_General.Module_Utilities import rename, print_isreal, Sorted_Eig, Eig, is_unique
 
 # possible TODOS:
 # rename `print` functons into `calc` functions
@@ -299,7 +299,7 @@ def Diagonalize(A, B, text=True, **kwargs):
 
 def Show_Diagonalize(A, B, text=False, **kwargs):
     precision = kwargs.get("precision", 2)
-    #n = kwargs.get("n", 6)
+    # n = kwargs.get("n", 6)
     U_AB, D_A, D_B, B_Block, state = Diagonalize(
         A(**kwargs), B(**kwargs), text=text)
 

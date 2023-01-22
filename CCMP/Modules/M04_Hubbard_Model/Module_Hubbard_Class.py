@@ -36,15 +36,15 @@ def is_single_hopping_process(x, y, cre, anh) -> bool:
     Parameters
     ----------
     x, y : ndarray
-            initial and final state of hopping
+                    initial and final state of hopping
     cre, anh : int
-            index to which/from where to hop
+                    index to which/from where to hop
 
     Returns
     -------
 
     allowed : bool
-            `True` if hopping is allowed
+                    `True` if hopping is allowed
     """
     return (x[cre] * y[anh]) == 1 and (x[anh] + y[cre]) == 0
 
@@ -58,14 +58,14 @@ def hop_sign(state, i) -> float:
     Parameters
     ----------
     state : ndarray (1, 2n)
-            One state of the system.
+                    One state of the system.
     i : int
-            the index at which the creation/annihilation operator is applied.
+                    the index at which the creation/annihilation operator is applied.
 
     Returns
     -------
     sign : int
-            sign of the hopping
+                    sign of the hopping
     """
     return (-1)**np.sum(state[i+1:])
 
@@ -134,7 +134,7 @@ class Hubbard:
         Returns
         -------
         basis : ndarray (m, 2*n)
-                        array of basis states
+                                        array of basis states
         """
         _s_up = self.s_up.value
         _s_down = self.s_down.value
@@ -164,7 +164,7 @@ class Hubbard:
         Parameters
         ----------
         index : int
-                        Index of the basis vector to display
+                                        Index of the basis vector to display
 
         Returns
         -------
@@ -173,7 +173,7 @@ class Hubbard:
         Other Parameters
         ----------------
         **Kwargs : Widgets
-                        used to add sliders and other widgets to the displayed output
+                                        used to add sliders and other widgets to the displayed output
         """
         _n = self.n.value
         _s_up = self.s_up.value
@@ -193,7 +193,7 @@ class Hubbard:
         Parameters
         ----------
         change : dict
-                dictionary containing information about the change
+                        dictionary containing information about the change
         """
         self.basis = self.Construct_Basis()
         self.basis_index.max = self.basis.shape[0] - 1
@@ -207,7 +207,7 @@ class Hubbard:
         Parameters
         ----------
         change : dict
-                dictionary containing information about the change
+                        dictionary containing information about the change
         """
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
             pass
@@ -223,7 +223,7 @@ class Hubbard:
         Parameters
         ----------
         change : dict
-            dictionary containing information about the change
+                dictionary containing information about the change
         """
         if (self.s_down.value > self.n.value or self.s_up.value > self.n.value):
             pass
@@ -239,7 +239,7 @@ class Hubbard:
         Parameters
         ----------
         change: dict
-            dictionary containing information about the change
+                dictionary containing information about the change
         """
         self.Reset()
 
@@ -250,7 +250,7 @@ class Hubbard:
         Parameters
         ----------
         change: dict
-            dictionary containing information about the change
+                dictionary containing information about the change
         """
         self.Reset()
 
@@ -261,7 +261,7 @@ class Hubbard:
         Parameters
         ----------
         change: dict
-            dictionary containing information about the change
+                dictionary containing information about the change
         """
         if self.u1_checkbox.value == True:
             self.u1.layout.visibility = "visible"
@@ -279,14 +279,14 @@ class Hubbard:
         Parameters
         ----------
         cls: class
-            Class (and parent classes) to search for methods.
+                Class (and parent classes) to search for methods.
         decoratorName: str
-            Name of the decorator to search for .
+                Name of the decorator to search for .
 
         Returns
         -------
         methods: list[str]
-            List of methods that are decorated with the decorator.
+                List of methods that are decorated with the decorator.
         """
         methods = []
         cls_list = inspect.getmro(cls)
@@ -316,7 +316,7 @@ class Hubbard:
         Returns
         -------
         basis: ndarray(m, n)
-                        array of spin up basis states
+                                        array of spin up basis states
         """
         return self.basis[:, : self.n.value]
 
@@ -328,7 +328,7 @@ class Hubbard:
         Returns
         -------
         basis: ndarray(m, n)
-                                                                        array of spin down basis states
+                                                                                                                                        array of spin down basis states
         """
         return self.basis[:, self.n.value:]
 
@@ -364,7 +364,7 @@ class Hubbard:
         Returns
         -------
         hoppings: ndarray(4n, 2)
-                        Array of allowed hopping pairs
+                                        Array of allowed hopping pairs
         """
         _n = self.n.value
         r1 = np.arange(0, _n)
@@ -389,7 +389,7 @@ class Hubbard:
         Returns
         -------
         hoppings: ndarray(4n, 2)
-                        Array of allowed hopping pairs
+                                        Array of allowed hopping pairs
         """
         _n = self.n.value
         r1 = np.arange(0, _n)
@@ -409,18 +409,18 @@ class Hubbard:
         Parameters
         ----------
         A: ndarray(m, 2n)
-                        Basis to hop into
+                                        Basis to hop into
         B: ndarray(m, 2n)
-                        Basis to hop out of
+                                        Basis to hop out of
         ii: int
-                        index of site to hop into
+                                        index of site to hop into
         jj: int
-                        index of site to hop out of
+                                        index of site to hop out of
 
         Returns
         -------
         C: ndarray(m, m)
-                        Sign matrix of the hopping
+                                        Sign matrix of the hopping
         """
         assert A.shape[1] == B.shape[1]
         C = np.zeros((A.shape[0], B.shape[0]), A.dtype)
@@ -480,7 +480,7 @@ class Hubbard:
         Returns
         -------
         Hu: ndarray(m, m)
-                        on-site Interaction Hamiltonian
+                                        on-site Interaction Hamiltonian
         """
         return self.Op_nn
 
@@ -492,7 +492,7 @@ class Hubbard:
         Returns
         -------
         Hu: ndarray(m, m)
-                        on-site Interaction Hamiltonian
+                                        on-site Interaction Hamiltonian
         """
         return self.Op_nn_nearest_neighbour
 
@@ -503,11 +503,11 @@ class Hubbard:
         Parameters
         ----------
         u: float
-                        on-site interaction strength
+                                        on-site interaction strength
         t: float
-                        hopping strength
+                                        hopping strength
         u1: float
-                        nearest-neighbour-site interaction strength
+                                        nearest-neighbour-site interaction strength
         """
         if self.t_ij.value == True:
             return t * self.Ht_ij + u * self.Hu + u1 * self.Hu1
@@ -520,9 +520,9 @@ class Hubbard:
         Parameters
         ----------
         u: float
-                        on-site interaction strength due to electric field
+                                        on-site interaction strength due to electric field
         t: float
-                        global hopping amplitude from site i to site j
+                                        global hopping amplitude from site i to site j
 
         Returns
         -------
@@ -531,7 +531,7 @@ class Hubbard:
         Other Parameters
         ----------------
         **Kwargs: Widgets
-                        used to add sliders and other widgets to the displayed output
+                                        used to add sliders and other widgets to the displayed output
         """
         dimension = self.basis_index.max + 1
         print(f"Dimension of H = {dimension} x {dimension}")
@@ -553,7 +553,7 @@ class Hubbard:
         Returns
         -------
         vals: ndarray(len(u), m)
-                                                                        Eigenvalues of the on-site interaction Hamiltonian
+                                                                                                                                        Eigenvalues of the on-site interaction Hamiltonian
         """
         _u1 = self.u1.value
         vals = [np.linalg.eigvalsh(self.H(u, 1, _u1)) for u in self.u_array]
@@ -566,12 +566,13 @@ class Hubbard:
         Returns
         -------
         fig: matplotlib.figure.Figure
-                                                                        figure object to save as image-file
+                                                                                                                                        figure object to save as image-file
         Other Parameters
         ----------------
         **Kwargs: Widgets
-                        used to add sliders and other widgets to the displayed output
+                                        used to add sliders and other widgets to the displayed output
         """
+        _u1 = self.u1.value
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
 
         last_eigvals_u = self.Eigvals_Hu[-1, :]
@@ -580,16 +581,19 @@ class Hubbard:
 
         if self.u1_checkbox.value == True:
             uniq = np.unique(np.diag(u[-1] * self.Op_nn + self.u1.value *
-                                     self.Op_nn_nearest_neighbour).astype(int), return_counts=True)
+                                     self.Op_nn_nearest_neighbour).astype(float).round(2), return_counts=True)
         elif self.u1_checkbox.value == False:
             uniq = np.unique(np.diag(self.Op_nn).astype(int),
                              return_counts=True)
         color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]) % 10)
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
 
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
+
         fig = plt.figure(figsize=(10, 6))
-        plt.title(
-            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the on-site interaction strength $U$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$")
+        _title = fill(
+            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the on-site interaction strength $U$ for $n={self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s), hopping amplitude $t = 1$" + u1_str, width=80)
+        plt.title(rf"{_title}")
         plt.xlabel(r"$U$")
         plt.ylabel(r"Eigenvalue(s)")
         plt.grid(which="both", axis="both",
@@ -613,7 +617,7 @@ class Hubbard:
         Returns
         -------
         vals: ndarray(len(u), m)
-                                                                        Eigenvalues of the hopping Hamiltonian
+                Eigenvalues of the hopping Hamiltonian
         """
         _u1 = self.u1.value
         vals = [np.linalg.eigvalsh(self.H(10, t, _u1)) for t in self.t_array]
@@ -626,12 +630,13 @@ class Hubbard:
         Returns
         -------
         fig: matplotlib.figure.Figure
-                                                                        figure object to save as image-file
+                                                                                                                                        figure object to save as image-file
         Other Parameters
         ----------------
         **Kwargs: Widgets
-                        used to add sliders and other widgets to the displayed output
+                                        used to add sliders and other widgets to the displayed output
         """
+        _u1 = self.u1.value
         t_idx, t = self.find_indices_of_slider(self.t_array, self.t_range)
 
         last_eigvals_t = self.Eigvals_Ht[-1, :]
@@ -639,8 +644,8 @@ class Hubbard:
         eig_t = self.Eigvals_Ht[t_idx][:, sorted_eigval_idx]
 
         if self.u1_checkbox.value == True:
-            uniq = np.unique(np.diag(10 * self.Op_nn + self.u1.value *
-                                     self.Op_nn_nearest_neighbour).astype(int), return_counts=True)
+            uniq = np.unique(np.diag(10 * self.Op_nn + _u1 *
+                                     self.Op_nn_nearest_neighbour).astype(float).round(2), return_counts=True)
         elif self.u1_checkbox.value == False:
             uniq = np.unique(np.diag(self.Op_nn).astype(int),
                              return_counts=True)
@@ -648,9 +653,12 @@ class Hubbard:
         color = mpl.cm.tab10(np.repeat(np.arange(uniq[0].size), uniq[1]) % 10)
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
 
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
+
         fig = plt.figure(figsize=(10, 6))
-        plt.title(
-            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the hopping amplitude $t$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and on-site interaction $U=10$")
+        _title = fill(
+            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ as a function of the hopping amplitude $t$ for $n={self.n.value}$ sites \n with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s), on-site interaction $U=10$" + u1_str, width=80)
+        plt.title(rf"{_title}")
         plt.xlabel(r"$t$")
         plt.ylabel(r"Eigenvalue(s)")
         plt.grid(which="both", axis="both", linestyle="--",
@@ -673,11 +681,11 @@ class Hubbard:
         Returns
         -------
         fig: matplotlib.figure.Figure
-                                                                        figure object to save as image-file
+                                                                                                                                        figure object to save as image-file
         Other Parameters
         ----------------
         **Kwargs: Widgets
-                        used to add sliders and other widgets to the displayed output
+                                        used to add sliders and other widgets to the displayed output
         """
         t_idx, t = self.find_indices_of_slider(self.t_array, self.t_range)
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
@@ -714,8 +722,10 @@ class Hubbard:
         axes[0].set_xlabel(r"$U$")
         axes[0].set_ylabel(r"Eigenvalue(s)")
         axes[1].set_xlabel(r"$t$")
-        axes[0].grid()
-        axes[1].grid()
+        axes[0].grid(which="both", axis="both", linestyle="--",
+                     color="black", alpha=0.4)
+        axes[1].grid(which="both", axis="both", linestyle="--",
+                     color="black", alpha=0.4)
 
         axes[0].plot(u, eig_u, ".-")
         ax = axes[1].plot(t, eig_t, ".-")
@@ -723,8 +733,11 @@ class Hubbard:
         for idx, num in enumerate(np.cumsum(uniq[1])):
             ax[num-1].set_label(f"{uniq[1][idx]}")
 
-        fig.suptitle(
-            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ for $n={self.n.value}$ sites with {self.s_up.value} spin up electron(s) and {self.s_down.value} spin down electron(s). \n On the left as a function of $U$ for constant $t={t_max}$ and on the right as a function of $t$ for constant $U={u_max}$")
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
+        _title = fill(
+            f"Eigenvalues of Hubbard-Ring Hamiltonian $H$ for $n={self.n.value}$ sites with {self.s_up.value} spin up electron(s) and {self.s_down.value} spin down electron(s). On the left as a function of $U$ for constant $t={t_max}$ and on the right as a function of $t$ for constant $U={u_max}$" + u1_str, width=100)
+        fig.suptitle(fr"{_title}")
+
         fig.gca().invert_xaxis()
         fig.legend(bbox_to_anchor=(0.9, 0.9), loc="upper left",
                    ncol=1, title="# of eigenvalues")
@@ -739,7 +752,7 @@ class Hubbard:
         Returns
         -------
         bool
-                        True if the Hamiltonian is degenerate, else False
+                                        True if the Hamiltonian is degenerate, else False
         """
         _H = self.H(5, 1, 0)
 
@@ -758,7 +771,7 @@ class Hubbard:
         Returns
         -------
         k_list: nd_array(n,)
-                                                                        array of k-values
+                                                                                                                                        array of k-values
         """
         _n = self.n.value
         return np.exp(2 * np.pi * 1j / _n * np.arange(_n))
@@ -815,12 +828,12 @@ class Hubbard:
         Parameters
         ----------
         Op: ndarray(m, m)
-                        Matrix representation ( in occupation number basis) of the operator Op.
+                                        Matrix representation ( in occupation number basis) of the operator Op.
 
         Returns
         -------
         exp_val: ndaray(len(u),)
-                        Expectation value of the operator Op for u in [u_min, u_max]
+                                        Expectation value of the operator Op for u in [u_min, u_max]
         """
         # Calculates (vectorized) vector-wise matrix vector sandwich EV_i = vec_i.T * Op * vec_i
         # np.einsum("ij, ji->i", self.GS, Op @ self.GS.T)
@@ -845,7 +858,7 @@ class Hubbard:
         Parameters
         ----------
         i: int
-                        Site index
+                                        Site index
 
         Returns
         -------
@@ -860,7 +873,7 @@ class Hubbard:
         Parameters
         ----------
         i: int
-                        Site index
+                                        Site index
 
         Returns
         -------
@@ -895,7 +908,7 @@ class Hubbard:
         Parameters
         ----------
         k: float
-                        k-value at which to evaluate the operator
+                                        k-value at which to evaluate the operator
 
         Returns
         -------
@@ -995,7 +1008,7 @@ class Hubbard:
 
         return self.Calc_Coupling(Sz_staggered)
 
-    @staticmethod
+    @ staticmethod
     def find_indices_of_slider(array, range_slider):
         """
         Find indices of `array` that are within the range of the `range_slider`.
@@ -1003,16 +1016,16 @@ class Hubbard:
         Parameters
         - ---------
         array: ndarray
-                        array of values to be filtered
+                                        array of values to be filtered
         range_slider: Slider
-                        Slider object that contains the range of values to use as bounds
+                                        Slider object that contains the range of values to use as bounds
 
         Returns
         - ------
         s_idx: ndarray
-                        indices of `array` that are within the range of the `range_slider`
+                                        indices of `array` that are within the range of the `range_slider`
         s_arr: ndarray
-                        array of values that are within the range of the `range_slider`
+                                        array of values that are within the range of the `range_slider`
         """
         s_min = range_slider.value[0]
         s_max = range_slider.value[1]
@@ -1028,17 +1041,17 @@ class Hubbard:
         Returns
         - ------
         fig: matplotlib.figure.Figure
-                        figure object to save as image-file
+                                        figure object to save as image-file
 
         Other Parameters
         - ---------------
         **Kwargs: Widgets
-                        used to add sliders and other widgets to the displayed output
+                                        used to add sliders and other widgets to the displayed output
         """
         _s_up = self.s_up.value
         _s_down = self.s_down.value
         _n = self.n.value
-        _u_1 = self.u1.value
+        _u1 = self.u1.value
 
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
         nn_max = _s_up * _s_down / _n**2
@@ -1053,9 +1066,10 @@ class Hubbard:
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
         fig = plt.figure(figsize=(10, 6))
 
-        title = fill(
-            r"Average double occupation $\langle$$n_i^\mathrm{up}$$n_i^\mathrm{down}$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {_n}$ sites with {_s_up} spin up electron(s), {_s_down} spin down electron(s), hopping amplitude $t = 1$" + f" and nearest neighbor interaction $U_1 = {_u_1}$" if self.u1_checkbox.value == True else "", width=80)
-        plt.title(rf"{title}")
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
+        _title = fill(
+            r"Average double occupation $\langle$$n_i^\mathrm{up}$$n_i^\mathrm{down}$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {_n}$ sites with {_s_up} spin up electron(s), {_s_down} spin down electron(s), hopping amplitude $t = 1$" + u1_str, width=80)
+        plt.title(rf"{_title}")
         plt.xlabel(r"$U$")
         plt.ylabel(nn_str)
         plt.grid(which="both", axis="both", linestyle="--",
@@ -1080,16 +1094,17 @@ class Hubbard:
         - ------
 
         fig: matplotlib.figure.Figure
-                        figure object to save as image-file
+                                        figure object to save as image-file
 
         Other Parameters
         - ---------------
         **Kwargs: Widgets
-                        used to add sliders and other widgets to the displayed output
+                                        used to add sliders and other widgets to the displayed output
         """
         _s_up = self.s_up.value
         _s_down = self.s_down.value
         _n = self.n.value
+        _u1 = self.u1.value
 
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
         # nn_max = _s_up * _s_down / _n**2
@@ -1107,9 +1122,10 @@ class Hubbard:
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
         fig = plt.figure(figsize=(10, 6))
 
-        title = fill(
-            r"Average Spin moment $\langle$$S_{iz}$$\rangle$, $\langle$$S^2_{iz}$$\rangle$ and $\langle$$\Delta$$S_{iz}^2$$\rangle$"f" as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
-        plt.title(rf"{title}")
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
+        _title = fill(
+            r"Average Spin moment $\langle$$S_{iz}$$\rangle$, $\langle$$S^2_{iz}$$\rangle$ and $\langle$$\Delta$$S_{iz}^2$$\rangle$"f" as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s), hopping amplitude $t = 1$" + u1_str, width=80)
+        plt.title(rf"{_title}")
         plt.xlabel(r"$U$")
         plt.ylabel(
             r"Expectation value $\left\langle \hat O \right\rangle $")
@@ -1131,16 +1147,17 @@ class Hubbard:
         - ------
 
         fig: matplotlib.figure.Figure
-                        figure object to save as image-file
+                                        figure object to save as image-file
 
         Other Parameters
         - ---------------
         **Kwargs: Widgets
-                                        used to add sliders and other widgets to the displayed output
+                                                                        used to add sliders and other widgets to the displayed output
         """
         _s_up = self.s_up.value
         _s_down = self.s_down.value
         _n = self.n.value
+        _u1 = self.u1.value
 
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
         SzSz_ij = [S[u_idx] for S in self.ExpVal_SzSz_ij]
@@ -1151,8 +1168,9 @@ class Hubbard:
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
         fig = plt.figure(figsize=(10, 6))
 
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
         title = fill(
-            r"Spin-spin correlation $\langle$$S_{iz}$$S_{jz}$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+            r"Spin-spin correlation $\langle$$S_{iz}$$S_{jz}$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s), hopping amplitude $t = 1$" + u1_str, width=80)
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(SzSz_str)
@@ -1174,16 +1192,17 @@ class Hubbard:
         - ------
 
         fig: matplotlib.figure.Figure
-                        figure object to save as image-file
+                                        figure object to save as image-file
 
         Other Parameters
         - ---------------
         **Kwargs: Widgets
-                                        used to add sliders and other widgets to the displayed output
+                                                                        used to add sliders and other widgets to the displayed output
         """
         _s_up = self.s_up.value
         _s_down = self.s_down.value
         _n = self.n.value
+        _u1 = self.u1.value
 
         if self.is_degenerate():
             print(
@@ -1194,8 +1213,9 @@ class Hubbard:
 
         fig = plt.figure(figsize=(10, 6))
 
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
         title = fill(
-            r"Local susceptibility $\chi_\mathrm{loc}$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+            r"Local susceptibility $\chi_\mathrm{loc}$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s), hopping amplitude $t = 1$" + u1_str, width=80)
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(r"$\chi_\mathrm{loc}$")
@@ -1216,16 +1236,17 @@ class Hubbard:
         - ------
 
         fig: matplotlib.figure.Figure
-                        figure object to save as image-file
+                                        figure object to save as image-file
 
         Other Parameters
         - ---------------
         **Kwargs: Widgets
-                                        used to add sliders and other widgets to the displayed output
+                                                                        used to add sliders and other widgets to the displayed output
         """
         _s_up = self.s_up.value
         _s_down = self.s_down.value
         _n = self.n.value
+        _u1 = self.u1.value
 
         if self.is_degenerate():
             print(
@@ -1236,8 +1257,9 @@ class Hubbard:
 
         fig = plt.figure(figsize=(10, 6))
 
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
         title = fill(
-            r"Staggered susceptibility $\chi_\mathrm{staggered}$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+            r"Staggered susceptibility $\chi_\mathrm{staggered}$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s), hopping amplitude $t = 1$" + u1_str, width=80)
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(r"$\chi_\mathrm{staggered}$")
@@ -1295,16 +1317,17 @@ class Hubbard:
         - ------
 
         fig: matplotlib.figure.Figure
-                        figure object to save as image-file
+                                        figure object to save as image-file
 
         Other Parameters
         - ---------------
         **Kwargs: Widgets
-                                        used to add sliders and other widgets to the displayed output
+                                                                        used to add sliders and other widgets to the displayed output
         """
         _s_up = self.s_up.value
         _s_down = self.s_down.value
         _n = self.n.value
+        _u1 = self.u1.value
 
         u_idx, u = self.find_indices_of_slider(self.u_array, self.u_range)
         SzSz_kk = [S[u_idx] for S in self.ExpVal_SzkSzk]
@@ -1315,8 +1338,9 @@ class Hubbard:
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
         fig = plt.figure(figsize=(10, 6))
 
+        u1_str = f" and $U_1 = {_u1}$" if self.u1_checkbox.value == True else ""
         title = fill(
-            r"Reciprocal-space spin-spin correlation $\langle$$S_z(k)$$S_z(-k)$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+            r"Reciprocal-space spin-spin correlation $\langle$$S_z(k)$$S_z(-k)$$\rangle$ " f"as a function of the on-site interaction $U$ for $n = {self.n.value}$ sites with {self.s_up.value} spin up electron(s), {self.s_down.value} spin down electron(s), hopping amplitude $t = 1$" + u1_str, width=80)
         plt.title(rf"{title}")
         plt.xlabel(r"$U$")
         plt.ylabel(SzSz_kk_str)
