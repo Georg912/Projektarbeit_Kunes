@@ -20,7 +20,7 @@ u25_Slider = widgets.FloatSlider(
 delta_Slider = widgets.FloatSlider(
     value=0.02,
     min=0.0001,
-    max=1,
+    max=0.5,
     step=0.01,
     description=r'$\delta=$',
     continuous_update=False,

@@ -907,8 +907,8 @@ class Hubbard:
 
         Parameters
         ----------
-        k: float
-                                        k-value at which to evaluate the operator
+        k: int
+            k-value at which to evaluate the operator
 
         Returns
         -------
@@ -1016,16 +1016,16 @@ class Hubbard:
         Parameters
         - ---------
         array: ndarray
-                                        array of values to be filtered
+            array of values to be filtered
         range_slider: Slider
-                                        Slider object that contains the range of values to use as bounds
+            Slider object that contains the range of values to use as bounds
 
         Returns
         - ------
         s_idx: ndarray
-                                        indices of `array` that are within the range of the `range_slider`
+            indices of `array` that are within the range of the `range_slider`
         s_arr: ndarray
-                                        array of values that are within the range of the `range_slider`
+            array of values that are within the range of the `range_slider`
         """
         s_min = range_slider.value[0]
         s_max = range_slider.value[1]

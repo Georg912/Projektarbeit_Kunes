@@ -47,14 +47,14 @@ class DynamicalHubbard(Hubbard):
             eig_vec0 = eig_vecs[:, :, 0]
             return np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], Op @ eig_vec0.T)
 
-    def Imag_Lorentzian(self, idx):
+    def Imag_Lorentzian(self, U_idx: int):
         """
-        Imaginary part of the Lorentzian function for visualizing the poles of the Green's function.
+        Imaginary part of the Lorentzian function for visualizing the poles of the Green's function for a specific value of the on-site interaction U.
 
         Parameters
         ----------
-        idx : int
-            u index of `E_n_bar` for which to calculate Lorentzian.
+        U_idx : int
+            u index of `E_n_bar` for which to calculate Lorentzian that corresponds to U.
 
         Returns
         -------
@@ -62,18 +62,18 @@ class DynamicalHubbard(Hubbard):
         """
         _d = self.delta.value
         _w = self.omega_array
-        _E = self.E_n_bar[idx, :]
+        _E = self.E_n_bar[U_idx, :]
 
         return _d / ((_w[:, np.newaxis]**2 - _E**2)**2 + _d**2)
 
-    def Real_Lorentzian(self, idx):
+    def Real_Lorentzian(self, U_idx: int):
         """
-        Real part of the Lorentzian function for visualizing the poles of the Green's function.
+        Real part of the Lorentzian function for visualizing the poles of the Green's function for a specific value of the on-site interaction U.
 
         Parameters
         ----------
-        idx : int
-            u index of `E_n_bar` for which to calculate Lorentzian.
+        U_idx : int
+            u index of `E_n_bar` for which to calculate Lorentzian, that corresponds to U.
 
         Returns
         -------
@@ -81,7 +81,7 @@ class DynamicalHubbard(Hubbard):
         """
         _d = self.delta.value
         _w = self.omega_array
-        _E = self.E_n_bar[idx, :]
+        _E = self.E_n_bar[U_idx, :]
 
         return (_E - _w[:, np.newaxis]**2) / ((_w[:, np.newaxis]**2**2 - _E**2)**2 + _d**2)
 
@@ -108,7 +108,7 @@ class DynamicalHubbard(Hubbard):
 
         return idx[0]
 
-    def Greens_Function(self, Lorentzian, idx, A, B=1.):
+    def Greens_Function(self, Lorentzian: callable, idx: int, A, B=1.):
         """
         Calculate the Green's function G_AB(w) = sum_n <g|A|n><n|B|g> L(w) for a given `Lorentzian` function L and matrix element coefficients for Operators A and B.
 
@@ -116,6 +116,7 @@ class DynamicalHubbard(Hubbard):
         ----------
         Lorentzian : function
             Lorentzian function to use for calculating Green's function.
+            Either `Imag_Lorentzian` or `Real_Lorentzian`
         idx : int
             u index of `E_n_bar` for which to calculate Green's function.
         A : ndarray (m-1)
@@ -148,31 +149,58 @@ class DynamicalHubbard(Hubbard):
         # deal with non-degenerate ground state
         else:
             return eig_vals[:, 1:] - eig_vals[:, 0][:, np.newaxis]
-# TODO document code from here on
 
-    def Mel_Sz(self, i):
+    def Mel_Sz(self, i: int):
+        """
+        Convenience function to calculate the matrix elements of the operator Sz_i as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Sz_i |psi_g>|, for all m eigenvalues of H(U).
+
+        Parameters
+        ----------
+        i : int
+            site index of Sz_i
+
+        Returns
+        -------
+        <n|Sz_i|g> : ndarray (len(u_array), m-1)
+        """
         return self.Calc_GS_Overlap_Elements(self.Op_Sz(i))
 
     @Cach
     def Mel_Sz_0(self):
+        """
+        Convenience function to calculate the matrix elements of the operator Sz_0 as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Sz_0 |psi_g>|, for all m eigenvalues of H(U).
+        Also stores the result in the cache.
+
+        Returns
+        -------
+        <n|Sz_0|g> : ndarray (len(u_array), m-1)
+        """
         return self.Calc_GS_Overlap_Elements(self.Op_Sz(0))
 
     @Cach
-    def Mel_SzSz(self):
+    def Mel_SzSz(self) -> list[np.ndarray]:
+        """
+        Ccalculates and stores the matrix elements of the operator Sz_i Sz_j for all relevant pairs of i and j, as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Sz_i Sz_j |psi_g>|, for all m eigenvalues of H(U).
+
+        Returns
+        -------
+        <n|Sz_i Sz_j|g> : list[ndarray (len(u_array), m-1)]
+        """
         return [self.Mel_Sz_0 * self.Mel_Sz(i) for i in np.arange(self.n.value // 2 + 1)]
 
-    def Plot_G_SzSz(self, **kwargs):
+    def Plot_G_SzSz(self, Lorentzian: str, **kwargs):
         """
         Method to plot the spin-spin correlation G_SzSz of the operator `Sz_i Sz_j` for u in [u_min, u_max] and t=1, for all relevant combinations of i and j.
 
         Returns
         -------
-
         fig : matplotlib.figure.Figure
             figure object to save as image-file
 
-        Lorentzian : function
-            which Lorentzian function to use for the calculation of the Greens function, either "Imag_Lorentzian" or "Real_Lorentzian"
+        Parameters
+        ----------
+        Lorentzian : str
+            which Lorentzian function to use for the calculation of the Greens function, either "Imag" or "Real"
 
         Other Parameters
         ----------------
@@ -190,26 +218,58 @@ class DynamicalHubbard(Hubbard):
         u_idx = self.find_index_matching_u25_value(self.u_array)
 
         G_Szi_Szj = [S[u_idx, :] for S in self.Mel_SzSz]
-        G_Szi_Szj = [self.Greens_Function(
-            self.Real_Lorentzian, u_idx, S)[w_idx] for S in G_Szi_Szj]
+        if Lorentzian == "Imaginary":
+            Lorentzian_func = self.Imag_Lorentzian
+            L_str = "Im"
+        elif Lorentzian == "Real":
+            Lorentzian_func = self.Real_Lorentzian
+            L_str = "Re"
+        G_Szi_Szj = [self.Greens_Function(Lorentzian_func, u_idx, S)[
+            w_idx] for S in G_Szi_Szj]
 
-        G_SzSz_str = r"$\left\langle S_{iz} S_{jz} \right\rangle_\omega $"
+        G_SzSz_str = f"{L_str} " r"$\left\langle S_{iz} S_{jz} \right\rangle_\omega $"
 
         color = mpl.cm.tab10(np.arange(0, 10))
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
-        fig = plt.figure(figsize=(10, 6))
+        # fig = plt.figure(figsize=(10, 6))#
+        fig, axs = plt.subplots(2, 2, figsize=(
+            10, 6))
 
         title = fill(
-            r"Green's function $\langle$$S_{iz}$$S_{jz}$$\rangle_\omega$ " f"for on-site interaction $U = {_u25}$, $\delta = {_d:.2f}$, $n = {_n}$ sites with {_s_up} spin up electron(s), {_s_down} spin down electron(s) and hopping amplitude $t = 1$", width=80)
-        plt.title(rf"{title}")
-        plt.xlabel(r"$\omega$")
-        plt.ylabel(G_SzSz_str)
-        plt.grid(which="both", axis="both", linestyle="--",
-                 color="black", alpha=0.4)
+            f"{Lorentzian}" r" part of Green's function $\langle$$S_{iz}$$S_{jz}$$\rangle_\omega$ " f"for on-site interaction $U = {_u25}$, $\delta = {_d:.2f}$, $n = {_n}$ sites with {_s_up} spin up electron(s), {_s_down} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        fig.set_tight_layout(True)
+        fig.suptitle(title)
+        # plt.title(rf"{title}")
+        # plt.xlabel(r"$\omega$")
+        # plt.ylabel(G_SzSz_str)
+        # plt.grid(which="both", axis="both", linestyle="--",
+        #          color="black", alpha=0.4)
 
-        for i in np.arange(_n // 2 + 1):
-            plt.plot(w, G_Szi_Szj[i],
-                     label=r"$\langle S_{1z}S_{"f"{i+1}"r"z}\rangle_\omega$")
+        for i, ax in enumerate(axs.flatten()):
+            if i >= _n // 2 + 1:
+                fig.delaxes(ax)
+            else:
+                ax.plot(w, G_Szi_Szj[i],
+                        label=r"$\langle S_{1z}S_{"f"{i+1}"r"z}\rangle_\omega$", color=color[i])
 
-        plt.legend(bbox_to_anchor=(1.0, 1), loc="upper left", ncol=1)
+                # ax.set_xlabel(r"$\omega$")
+                # ax.set_ylabel(G_SzSz_str)
+                ax.grid(which="both", axis="both",
+                        linestyle="--", color="black", alpha=0.4)
+                ax.legend(loc="best")
+            if i % 2 == 0:
+                ax.set_ylabel(G_SzSz_str)
+            if i >= _n // 2 - 1:
+                ax.set_xlabel(r"$\omega$")
+        # plt.legend(bbox_to_anchor=(1.0, 1), loc="upper left", ncol=1)
         return fig
+
+
+def calc_grid_spec(n: int):
+    """
+    Retuns a tuple of (nrows, ncols) for a grid of subplots with n subplots.
+    """
+    if n == 2:
+        return (1, 2)
+    elif n == 3 or n == 4:
+        return (2, 2)

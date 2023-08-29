@@ -118,7 +118,7 @@ t_Slider = widgets.FloatSlider(
 )
 ################################
 u1_Slider = widgets.FloatSlider(
-    value=2,
+    value=0,
     min=0,
     max=5,
     step=0.01,
