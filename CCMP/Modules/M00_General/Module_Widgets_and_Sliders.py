@@ -114,6 +114,7 @@ def set_filename(name):
                         description='Filename:',
                         value=name,
                         style={'description_width': 'initial'},
+                        layout=Layout(width="10cm"),
                         )
     return text
 

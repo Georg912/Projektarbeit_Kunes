@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt  	# Plotting
 import matplotlib as mpl
 from cycler import cycler  			# used for color cycles in mpl
 from textwrap import fill  			# used for text wrapping in mpl
+from fractions import Fraction  	# used for fractions in mpl
 import numpy as np
 
 
@@ -64,7 +65,7 @@ class DynamicalHubbard(Hubbard):
         _w = self.omega_array
         _E = self.E_n_bar[U_idx, :]
 
-        return _d / ((_w[:, np.newaxis]**2 - _E**2)**2 + _d**2)
+        return _d / ((_w[:, np.newaxis] - _E)**2 + _d**2) / 2.
 
     def Real_Lorentzian(self, U_idx: int):
         """
@@ -83,7 +84,7 @@ class DynamicalHubbard(Hubbard):
         _w = self.omega_array
         _E = self.E_n_bar[U_idx, :]
 
-        return (_E - _w[:, np.newaxis]**2) / ((_w[:, np.newaxis]**2**2 - _E**2)**2 + _d**2)
+        return (_E - _w[:, np.newaxis]) / ((_w[:, np.newaxis] - _E)**2 + _d**2)
 
     def find_index_matching_u25_value(self, array):
         """
@@ -180,7 +181,7 @@ class DynamicalHubbard(Hubbard):
     @Cach
     def Mel_SzSz(self) -> list[np.ndarray]:
         """
-        Ccalculates and stores the matrix elements of the operator Sz_i Sz_j for all relevant pairs of i and j, as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Sz_i Sz_j |psi_g>|, for all m eigenvalues of H(U).
+        Calculates and stores the matrix elements of the operator Sz_i Sz_j for all relevant pairs of i and j, as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Sz_i Sz_j |psi_g>|, for all m eigenvalues of H(U).
 
         Returns
         -------
@@ -264,12 +265,113 @@ class DynamicalHubbard(Hubbard):
         # plt.legend(bbox_to_anchor=(1.0, 1), loc="upper left", ncol=1)
         return fig
 
+    def Mel_Szk(self, k: int):
+        """
+        Convenience function to calculate the matrix elements of the operator Szk_i as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Szk_i |psi_g>|, for all m eigenvalues of H(U).
 
-def calc_grid_spec(n: int):
-    """
-    Retuns a tuple of (nrows, ncols) for a grid of subplots with n subplots.
-    """
-    if n == 2:
-        return (1, 2)
-    elif n == 3 or n == 4:
-        return (2, 2)
+        Parameters
+        ----------
+        k : int
+            k index of Szk
+
+        Returns
+        -------
+        <n|Szk_i|g> : ndarray (len(u_array), m-1)
+        """
+        return self.Calc_GS_Overlap_Elements(self.Op_Szk(k))
+
+    @Cach
+    def Mel_Szk_list(self) -> list[np.ndarray]:
+        """
+        Convenience function to calculate the matrix elements of the operators Szk as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Szk_0 |psi_g>|, for all m eigenvalues of H(U).
+        Also stores the result in the cache.
+
+        Returns
+        -------
+        <n|Szk_i|g> : list[ndarray (len(u_array), m-1)]
+        """
+        _n = self.n.value
+
+        return [self.Mel_Szk(k) for k in np.arange(_n)]
+
+    @Cach
+    def Mel_SzkSzk(self) -> list[np.ndarray]:
+        """
+        Calculates and stores the matrix elements of the operator Szk_i Sz_j for all relevant pairs of i and j, as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Szk_i Szk_j |psi_g>|, for all m eigenvalues of H(U).
+
+        Returns
+        -------
+        <n|Szk_i Szk_j|g> : list[ndarray (len(u_array), m-1)]
+        """
+        _n = self.n.value
+        # number_of_unique_correlations
+        _l = int(np.floor(_n / 2) + 1)
+
+        return [self.Mel_Szk_list[k] * self.Mel_Szk_list[(_n-k) % _n] for k in np.arange(_l)]
+
+    def Plot_G_SzkSzk(self, **kwargs) -> plt.figure:
+        """
+        Method to plot the spin-spin correlation G_SzkSzk of the operator `Sz_i Sz_j` for u in [u_min, u_max] and t=1, for all relevant combinations of i and j.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+        _u25 = self.u25.value
+        _d = self.delta.value
+
+        w_idx, w = self.find_indices_of_slider(
+            self.omega_array, self.omega_range)
+        u_idx = self.find_index_matching_u25_value(self.u_array)
+
+        G_Szki_Szkj = [S[u_idx, :] for S in self.Mel_SzkSzk]
+        ImG_Szki_Szkj = [np.round(self.Greens_Function(self.Imag_Lorentzian, u_idx, S), 5)[
+            w_idx] for S in G_Szki_Szkj]
+        ReG_Szki_Szkj = [np.round(self.Greens_Function(self.Real_Lorentzian, u_idx, S), 5)[
+            w_idx] for S in G_Szki_Szkj]
+
+        G_SzkSzk_str = r"$\left\langle S_z(k) S_z(-k) \right\rangle_\omega $"
+
+        color = mpl.cm.tab10(np.arange(0, 10))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+        fig, axs = plt.subplots(2, 2, figsize=(
+            10, 6))
+
+        title = fill(
+            r"Green's function $\langle$$S_z(k)$$S_z(-k)$$\rangle_\omega$ in $k$-space " f"for on-site interaction $U = {_u25}$, $\delta = {_d:.2f}$, $n = {_n}$ sites with {_s_up} spin up electron(s), {_s_down} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        fig.set_tight_layout(True)
+        fig.suptitle(title)
+
+        # number_of_unique_correlations
+        _l = np.floor(_n / 2) + 1
+        labels = [str(Fraction(2 / _n * i).limit_denominator(100))
+                  for i in np.arange(_l)]
+
+        for i, ax in enumerate(axs.flatten()):
+            if i >= _l:
+                fig.delaxes(ax)
+            else:
+                ax.plot(w, ImG_Szki_Szkj[i],
+                        label="Im", color=color[i])
+                ax.plot(w, ReG_Szki_Szkj[i], linestyle="--", label="Re",
+                        color=color[int(i+_l)], alpha=0.9)
+                ax.annotate(rf"$k = {{{labels[i]}}} \cdot \pi $", xy=(
+                    0.01, 0.89), xycoords="axes fraction", color="b",)
+
+                ax.grid(which="both", axis="both",
+                        linestyle="--", color="black", alpha=0.4)
+                ax.legend(loc="upper right")
+            if i % 2 == 0:
+                ax.set_ylabel(G_SzkSzk_str)
+            if i >= _l - 2:
+                ax.set_xlabel(r"$\omega$")
+        return fig
