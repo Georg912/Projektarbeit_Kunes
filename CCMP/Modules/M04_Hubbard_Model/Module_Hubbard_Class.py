@@ -24,12 +24,13 @@ from textwrap import fill
 from matplotlib.ticker import FormatStrFormatter
 from pathlib import Path
 import inspect
+from enum import IntEnum
 
 
 @jit
 def is_single_hopping_process(x, y, cre, anh) -> bool:
     """
-    returns `True` if hopping from state `x` at postion `cre` to state `y` at position `anh` is allowed, i.e. if it is a single hopping process which transforms state x into state y.
+    returns `True` if hopping from state `x` at position `cre` to state `y` at position `anh` is allowed, i.e. if it is a single hopping process which transforms state x into state y.
 
     Keep in mind that this does **not** check, if the spin is conserved, i.e. also hopping from a spin up side (0 <= cre < n) to a spin down site (n <= anh < 2n) is allowed.
 
@@ -72,22 +73,27 @@ def hop_sign(state, i) -> float:
 
 class Hubbard:
 
-    def __init__(self, n=6, s_up=3, s_down=3):
+    def __init__(self, n=None, s_up=None, s_down=None) -> None:
 
         self.out = widgets.Output()
 
         # Set all site and spin sliders
         ############################################
         self.n = n_Slider
-        self.n.value = n
+        # set default value but allow creation of class with custom n
+        # in hindsight, necessary for DynamicalHubbardPropagator class
+        if n is None:
+            self.n.value = 6
         self.n.observe(self.on_change_n, names="value")
 
         self.s_up = s_up_Slider
-        self.s_up.value = s_up
+        if s_up is None:
+            self.s_up.value = 3
         self.s_up.observe(self.on_change_s_up, names="value")
 
         self.s_down = s_down_Slider
-        self.s_down.value = s_down
+        if s_down is None:
+            self.s_down.value = 3
         self.s_down.observe(self.on_change_s_down, names="value")
 
         # Calculate basis states and set index sliders
@@ -409,18 +415,18 @@ class Hubbard:
         Parameters
         ----------
         A: ndarray(m, 2n)
-                                        Basis to hop into
+            Basis to hop into
         B: ndarray(m, 2n)
-                                        Basis to hop out of
+            Basis to hop out of
         ii: int
-                                        index of site to hop into
+            index of site to hop into
         jj: int
-                                        index of site to hop out of
+            index of site to hop out of
 
         Returns
         -------
         C: ndarray(m, m)
-                                        Sign matrix of the hopping
+            Sign matrix of the hopping
         """
         assert A.shape[1] == B.shape[1]
         C = np.zeros((A.shape[0], B.shape[0]), A.dtype)
