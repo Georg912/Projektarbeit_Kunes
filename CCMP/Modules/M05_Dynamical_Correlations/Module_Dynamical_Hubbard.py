@@ -1,7 +1,6 @@
 from ..M04_Hubbard_Model.Module_Hubbard_Class import Hubbard, is_single_hopping_process, hop_sign
 from ..M04_Hubbard_Model.Module_Cache_Decorator import Cach
-from .Module_Widgets import u25_Slider, omega_range_Slider, delta_Slider
-
+from .Module_Widgets import u25_Slider, omega_range_Slider, delta_Slider, site_i_Slider, site_j_Slider, mu_Slider
 import matplotlib.pyplot as plt  	# Plotting
 import matplotlib as mpl
 from cycler import cycler  			# used for color cycles in mpl
@@ -16,6 +15,16 @@ from numba import jit, njit  # used for just in time compilation
 import inspect  # used to get source code of functions
 # used to calculate distances between vectors
 import scipy.spatial.distance as sp
+import scipy.linalg as sp_la
+from enum import Enum, auto  # used for enumerations
+
+
+class Sector(Enum):
+    """
+    Enumeration of the different sectors of the Hilbert space.
+    """
+    PLUS = "plus"
+    MINUS = "minus"
 
 
 class DynamicalHubbard(Hubbard):
@@ -401,6 +410,10 @@ class DynamicalHubbardPropagator(DynamicalHubbard):
         self.s_up.observe(self.on_change_s_up2, names="value")
         self.s_down.observe(self.on_change_s_down2, names="value")
 
+        self.site_i = site_i_Slider
+        self.site_j = site_j_Slider
+        self.mu = mu_Slider
+
     def check_basis_creation(self) -> None:
         if self.s_up.value < self.n.value:
             self.hubbard_plus = Hubbard_NEW(
@@ -551,6 +564,444 @@ class DynamicalHubbardPropagator(DynamicalHubbard):
         Calculates and stores the matrix elements of the operator c_k^dagger for all relevant sites k.
         """
         return [self.Op_Ck_dagger(k) for k in np.arange(self.n.value)]
+
+    def Calc_GS_Overlap_Elements_PM(self, Op: np.ndarray, sector: Sector) -> np.ndarray:
+        """
+        Calculate the two dimensional matrix element array mel[U, i] = <psi_i| Op |psi_g>| of the system for all m eigenvectors of H(U), where the ground state is in the sector n and the states <psi_i| are in the sector `sector`.
+
+        Parameters
+        ----------
+        Op : ndarray (p, q)
+            Operator to calculate the matrix elements of
+        sector : Sector
+            Sector of the states <psi_i| to calculate the matrix elements of
+            Either `PLUS` or `MINUS`
+
+        Returns
+        -------
+        Coupling : ndarray (len(u_array), m-1)
+        """
+
+        _, eig_vecs_n = self.All_Eigvals_and_Eigvecs
+
+        if sector == Sector.MINUS:
+            _, eig_vecs_nPM = self.hubbard_minus.All_Eigvals_and_Eigvecs
+        elif sector == Sector.PLUS:
+            _, eig_vecs_nPM = self.hubbard_plus.All_Eigvals_and_Eigvecs
+        else:
+            raise ValueError(f"Unknown sector {sector}")
+
+        # deal with degenerate ground states
+        if self.is_degenerate():
+            eig_vec0 = np.sum(eig_vecs_n[:, :, :2], axis=2) / np.sqrt(2)
+        # deal with non-degenerate ground state
+        else:
+            eig_vec0 = eig_vecs_n[:, :, 0]
+
+        return np.einsum("ijk, ji->ik", eig_vecs_nPM[:, :, :], Op @ eig_vec0.T)
+
+    def Mel_Ckd(self, k: int) -> np.ndarray:
+        """
+        Convenience function to calculate the matrix elements of the operator Ck_i as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Ck_i |psi_g>|, for all m eigenvalues of H(U).
+
+        Parameters
+        ----------
+        k : int
+            k index of Ck
+
+        Returns
+        -------
+        <n|Ck_i|g> : ndarray (len(u_array), m-1)
+        """
+        return self.Calc_GS_Overlap_Elements_PM(self.Op_Ck_dagger(k), Sector.PLUS)
+
+    @Cach
+    def Mel_CkdCkd(self) -> list[np.ndarray]:
+        """
+        Calculates and stores the matrix elements of the operator Ck_i Ck_j for all relevant pairs of i and j, as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Ck_i Ck_j |psi_g>|, for all m eigenvalues of H(U).
+
+        Returns
+        -------
+        <n|Ck_i Ck_j|g> : list[ndarray (len(u_array), m-1)]
+        """
+        _n = self.n.value
+        # number_of_unique_correlations
+        _l = int(np.floor(_n / 2) + 1)
+
+        return [np.abs(self.Mel_Ckd(k))**2 for k in np.arange(_l)]
+
+    def Mel_Ck(self, k: int) -> np.ndarray:
+        """
+        Convenience function to calculate the matrix elements of the operator Ck_i as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Ck_i |psi_g>|, for all m eigenvalues of H(U).
+
+        Parameters
+        ----------
+        k : int
+            k index of Ck
+
+        Returns
+        -------
+        <n|Ck_i|g> : ndarray (len(u_array), m-1)
+        """
+        return self.Calc_GS_Overlap_Elements_PM(self.Op_Ck(k), Sector.MINUS)
+
+    @Cach
+    def Mel_CkCk(self) -> list[np.ndarray]:
+        """
+        Calculates and stores the matrix elements of the operator Ck_i Ck_j for all relevant pairs of i and j, as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n| Ck_i Ck_j |psi_g>|, for all m eigenvalues of H(U).
+
+        Returns
+        -------
+        <n|Ck_i Ck_j|g> : list[ndarray (len(u_array), m-1)]
+        """
+        _n = self.n.value
+        # number_of_unique_correlations
+        _l = int(np.floor(_n / 2) + 1)
+
+        return [np.abs(self.Mel_Ck(k))**2 for k in np.arange(_l)]
+
+    def En_bar_PM(self, sector: Sector) -> np.ndarray:
+        """
+        Calculates the shifted eigenvalues of H, reduced by the ground state eigenvalue.
+        i.e. E_n_bar = E_n - E_0 for all eigenvalues > E_0 and all U in u_array for the Hamiltonian of the sector `sector`.
+
+        Parameters
+        ----------
+        sector : str
+            which sector to calculate the eigenvalues for, either `PLUS` or `MINUS`.
+            `PLUS` means that the eigenvalues of the Hamiltonian are calculated for the sector with one additional up electron.
+            `MINUS` means that the eigenvalues of the Hamiltonian are calculated for the sector with one less up electron.
+
+        Returns
+        -------
+        En_bar : ndarray (len(u_array), m-1)
+        """
+        eig_vals_n, _ = self.All_Eigvals_and_Eigvecs
+        if sector == Sector.PLUS:
+            eig_vals, _ = self.hubbard_plus.All_Eigvals_and_Eigvecs
+        elif sector == Sector.MINUS:
+            eig_vals, _ = self.hubbard_minus.All_Eigvals_and_Eigvecs
+        else:
+            raise ValueError("sector must be either PLUS or MINUS")
+
+        return eig_vals[:, :] - eig_vals_n[:, 0][:, np.newaxis]
+
+    @Cach
+    def E_n_bar_p(self) -> np.ndarray:
+        """
+        Convenience function to calculate and store the shifted eigenvalues of H in the sector with one electron more, reduced by the ground state eigenvalue.
+
+        Returns
+        -------
+        E_n_bar : ndarray (len(u_array), m-1)
+        """
+        return self.En_bar_PM(Sector.PLUS)
+
+    @Cach
+    def E_n_bar_m(self) -> np.ndarray:
+        """
+        Convenience function to calculate and store the shifted eigenvalues of H in the sector with one electron less, reduced by the ground state eigenvalue.
+
+        Returns
+        -------
+        E_n_bar : ndarray (len(u_array), m-1)
+        """
+        return self.En_bar_PM(Sector.MINUS)
+
+    def Imag_Lorentzian_PM(self, U_idx: int, sector: Sector, mu) -> np.ndarray:
+        """
+        Imaginary part of the Lorentzian function for visualizing the poles of the Green's function for a specific value of the on-site interaction U for the Hamiltonian of the sector `sector`.
+
+        Parameters
+        ----------
+        U_idx : int
+            u index of `E_n_bar` for which to calculate Lorentzian that corresponds to U.
+        sector : Sector
+            which sector to calculate the eigenvalues for, either `PLUS` or `MINUS`.
+        mu : float
+            chemical potential, used to shift the eigenvalues and usually set to U/2.
+
+        Returns
+        -------
+        Imag_Lorentzian : ndarray (len(omega_positive_array), m-1)
+        """
+        _d = self.delta.value
+        _w = self.omega_array
+        if sector == Sector.PLUS:
+            _E = self.E_n_bar_p[U_idx, :] - mu
+        elif sector == Sector.MINUS:
+            _E = self.E_n_bar_m[U_idx, :] + mu
+        else:
+            raise ValueError("sector must be either PLUS or MINUS")
+
+        return _d / ((_w[:, np.newaxis] - _E)**2 + _d**2) / 2.
+
+    def Real_Lorentzian_PM(self, U_idx: int, sector: Sector, mu) -> np.ndarray:
+        """
+        Real part of the Lorentzian function for visualizing the poles of the Green's function for a specific value of the on-site interaction U for the Hamiltonian of the sector `sector`.
+
+        Parameters
+        ----------
+        U_idx : int
+            u index of `E_n_bar` for which to calculate Lorentzian, that corresponds to U.
+        sector : Sector
+            which sector to calculate the eigenvalues for, either `PLUS` or `MINUS`.
+        mu : float
+            chemical potential, used to shift the eigenvalues and usually set to U/2.
+
+        Returns
+        -------
+        Real_Lorentzian : ndarray (len(omega_positive_array), m-1)
+        """
+        _d = self.delta.value
+        _w = self.omega_array
+        if sector == Sector.PLUS:
+            _E = self.E_n_bar_p[U_idx, :] - mu
+        elif sector == Sector.MINUS:
+            _E = self.E_n_bar_m[U_idx, :] + mu
+        else:
+            raise ValueError("sector must be either PLUS or MINUS")
+
+        return (_E - _w[:, np.newaxis]) / ((_w[:, np.newaxis] - _E)**2 + _d**2)
+
+    def Mel_CidCjd(self, i: int, j: int) -> np.ndarray:
+        """
+        Convenience function to calculate the matrix elements of the operator Cd_i Cd_j as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n-1| Cd_i Cd_j |psi_g>|, for all m eigenvalues of H(U).
+
+        Parameters
+        ----------
+        i : int
+            i index of Ci
+        j : int
+            j index of Cj
+
+        Returns
+        -------
+        <n|Cd_i Cd_j|g> : ndarray (len(u_array), m-1)
+        """
+        return self.Calc_GS_Overlap_Elements_PM(self.Op_C_dagger_list[i], Sector.PLUS) * self.Calc_GS_Overlap_Elements_PM(self.Op_C_dagger_list[j], Sector.PLUS)
+
+    def Mel_CiCj(self, i: int, j: int) -> np.ndarray:
+        """
+        Convenience function to calculate the matrix elements of the operator C_i C_j as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n-1| C_i C_j |psi_g>|, for all m eigenvalues of H(U).
+
+        Parameters
+        ----------
+        i : int
+            i index of Ci
+        j : int
+            j index of Cj
+
+        Returns
+        -------
+        <n|Cd_i Cd_j|g> : ndarray (len(u_array), m-1)
+        """
+        return self.Calc_GS_Overlap_Elements_PM(self.Op_C_list[i], Sector.MINUS) * self.Calc_GS_Overlap_Elements_PM(self.Op_C_list[j], Sector.MINUS)
+
+    @Cach
+    def Mel_CiCj_list(self) -> list[list[np.ndarray]]:
+        """
+        Calculates and stores the matrix elements of the operator C_i C_j for all relevant pairs of i and j, as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n-1| C_i C_j |psi_g>|, for all m eigenvalues of H(U).
+
+        Returns
+        -------
+        <n|C_i C_j|g> : list[list[ndarray (len(u_array), m-1)]]
+        """
+        _n = self.n.value
+
+        return [[self.Mel_CiCj(i, j) for j in np.arange(_n)] for i in np.arange(_n)]
+
+    @Cach
+    def Mel_CidCjd_list(self) -> list[list[np.ndarray]]:
+        """
+        Calculates and stores the matrix elements of the operator Cd_i Cd_j for all relevant pairs of i and j, as a function for all the on-site interaction values of U, with the ground state wavefunction, i.e. <psi_n-1| Cd_i Cd_j |psi_g>|, for all m eigenvalues of H(U).
+
+        Returns
+        -------
+        <n|Cd_i Cd_j|g> : list[list[ndarray (len(u_array), m-1)]]
+        """
+        _n = self.n.value
+
+        return [[self.Mel_CidCjd(i, j) for j in np.arange(_n)] for i in np.arange(_n)]
+
+    @staticmethod
+    def find_negative_indices_of_slider(array: np.ndarray, range_slider) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Find indices of `array` that are within the negative range of the `range_slider`.
+
+        Parameters
+        - ---------
+        array: ndarray
+            array of values to be filtered
+        range_slider: Slider
+            Slider object that contains the range of values to use as bounds
+
+        Returns
+        - ------
+        s_idx: ndarray
+            indices of `array` that are within the range of the `range_slider`
+        s_arr: ndarray
+            array of values that are within the range of the `range_slider`
+        """
+        s_max = -range_slider.value[0]
+        s_min = -range_slider.value[1]
+
+        s_idx = np.nonzero(np.logical_and(array <= s_max, array >= s_min))
+        s_arr = array[s_idx]
+        return s_idx, s_arr
+
+    def Plot_A_w(self, **kwargs) -> plt.figure:
+        """
+        Method to plot the  one-particle spectral funtion A(w, k) in [u_min, u_max] and t=1, for all relevant values of k==k'
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            figure object to save as image-file
+
+        Other Parameters
+        ----------------
+        **Kwargs : Widgets
+            used to add sliders and other widgets to the displayed output
+        """
+        _s_up = self.s_up.value
+        _s_down = self.s_down.value
+        _n = self.n.value
+        _u25 = self.u25.value
+        _d = self.delta.value
+        _mu = self.mu.value
+        _site_i = self.site_i.value - 1
+        _site_j = self.site_j.value - 1
+
+        w_idx, w = self.find_indices_of_slider(
+            self.omega_array, self.omega_range)
+        w_negativ_idx, w_negativ = self.find_negative_indices_of_slider(
+            self.omega_array, self.omega_range)
+        u_idx = self.find_index_matching_u25_value(self.u_array)
+
+        def lor_plus(x) -> np.ndarray:
+            return self.Imag_Lorentzian_PM(x, Sector.PLUS, mu=_mu)
+
+        def lor_minus(x):
+            return self.Imag_Lorentzian_PM(
+                x, Sector.MINUS, mu=_mu)
+
+        if _s_up == 0:
+            A_plus = [A[u_idx, :] for A in self.Mel_CkdCkd]
+
+            # zero those matrix elements that are smaller than 1e-6
+            A_plus = [np.where(np.abs(A)**2 < 1e-6, 0, A) for A in A_plus]
+
+            ImA_plus = [np.round(self.Greens_Function(lor_plus, u_idx, A), 5)[
+                w_idx] for A in A_plus]
+            ImA_minus = None
+
+            A_local_plus = self.Mel_CidCjd_list[_site_i][_site_j][u_idx, :]
+            ImA_local_plus = np.round(self.Greens_Function(
+                lor_plus, u_idx, A_local_plus), 5)[w_idx]
+            ImA_local_minus = None
+
+        elif _s_up == _n:
+            A_minus = [A[u_idx, :] for A in self.Mel_CkCk]
+
+            # zero those matrix elements that are smaller than 1e-6
+            A_minus = [np.where(np.abs(A)**2 < 1e-6, 0, A) for A in A_minus]
+
+            ImA_plus = None
+            ImA_minus = [np.round(self.Greens_Function(lor_minus, u_idx, A), 5)[
+                w_negativ_idx] for A in A_minus]
+
+            A_local_minus = self.Mel_CiCj_list[_site_i][_site_j][u_idx, :]
+            ImA_local_plus = None
+            ImA_local_minus = np.round(self.Greens_Function(
+                lor_minus, u_idx, A_local_minus), 5)[w_negativ_idx]
+
+        else:
+            A_plus = [A[u_idx, :] for A in self.Mel_CkdCkd]
+            A_minus = [A[u_idx, :] for A in self.Mel_CkCk]
+
+            # zero those matrix elements that are smaller than 1e-6
+            A_plus = [np.where(np.abs(A)**2 < 1e-6, 0, A) for A in A_plus]
+            A_minus = [np.where(np.abs(A)**2 < 1e-6, 0, A) for A in A_minus]
+
+            ImA_plus = [np.round(self.Greens_Function(lor_plus, u_idx, A), 5)[
+                w_idx] for A in A_plus]
+            ImA_minus = [np.round(self.Greens_Function(lor_minus, u_idx, A), 5)[
+                w_negativ_idx] for A in A_minus]
+
+            A_local_plus = self.Mel_CidCjd_list[_site_i][_site_j][u_idx, :]
+            A_local_minus = self.Mel_CiCj_list[_site_i][_site_j][u_idx, :]
+            ImA_local_plus = np.round(self.Greens_Function(
+                lor_plus, u_idx, A_local_plus), 5)[w_idx]
+            ImA_local_minus = np.round(self.Greens_Function(
+                lor_minus, u_idx, A_local_minus), 5)[w_negativ_idx]
+
+        A_str = r"$A(\omega, k)$"
+
+        color = mpl.cm.tab10(np.arange(0, 10))
+        mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
+        if _n >= 6:
+            fig = plt.figure(figsize=(10, 9), layout="constrained")
+            gs = fig.add_gridspec(3, 2)
+        else:
+            fig = plt.figure(figsize=(10, 7), layout="constrained")
+            gs = fig.add_gridspec(2, 2)
+
+        title = fill(
+            r"One-particle spectral function $A(\omega)$ in $k$-space " f"for on-site interaction $U = {_u25}$, $\delta = {_d:.2f}$, $\mu = {_mu:.2f}$, $n = {_n}$ sites with {_s_up} spin up electron(s), {_s_down} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+        fig.set_tight_layout(True)
+        fig.suptitle(title)
+
+        # print(w, len(w))
+        # print(w_negativ, len(w_negativ))
+
+        # number_of_unique_correlations
+        _l = int(np.floor(_n / 2) + 1)
+        labels = [str(Fraction(2 / _n * i).limit_denominator(100))
+                  for i in np.arange(_l)]
+
+        for i in range(_l + 1):
+            ax = fig.add_subplot(gs[i])
+            if i > _l:
+                fig.delaxes(ax)
+                # add a subplot for the local spectral function at the end
+            elif i == _l:
+                if ImA_local_plus is not None:
+                    ax.plot(w, ImA_local_plus,
+                            label=rf"$c^\dagger_{{{_site_i+1},{_site_i+1}}}$", color="tab:red")
+                if ImA_local_minus is not None:
+                    ax.plot(w[:len(ImA_local_minus)], ImA_local_minus[::-1], linestyle="--", label=rf"$c_{{{_site_i+1},{_site_i+1}}}$",
+                            color="tab:green", alpha=0.9)
+                ax.grid(which="both", axis="both",
+                        linestyle="--", color="black", alpha=0.4)
+                ax.legend(loc="upper right")
+                ax.set_xlabel(r"$\omega$")
+                ax.set_ylabel("TODO")
+                ax.annotate(rf"$i = {_site_i+1}, j= {_site_j+1}$", xy=(
+                    0.01, 0.89), xycoords="axes fraction", color="b",)
+            else:
+                if ImA_plus is not None:
+                    ax.plot(w, ImA_plus[i],
+                            label=r"$c^\dagger(k)$", color="tab:orange")
+                if ImA_minus is not None:
+                    ax.plot(w[:len(ImA_minus[i])], ImA_minus[i][::-1], linestyle="--", label=r"$c(k)$",
+                            color="tab:blue", alpha=0.9)
+                # ax.plot(w, ReG_Szki_Szkj[i], linestyle="--", label="Re",
+                # color=color[int(i+_l)], alpha=0.9)
+                ax.annotate(rf"$k = {{{labels[i]}}} \cdot \pi $", xy=(
+                    0.01, 0.89), xycoords="axes fraction", color="b",)
+
+                ax.grid(which="both", axis="both",
+                        linestyle="--", color="black", alpha=0.4)
+                ax.legend(loc="upper right")
+            if i % 2 == 0:
+                ax.set_ylabel(A_str)
+            if i >= _l - 1:
+                ax.set_xlabel(r"$\omega$")
+            if i == _l:
+                ax.set_ylabel(r"local $A(\omega, i, j)$")
+
+        return fig
 
 
 class Hubbard_NEW():
@@ -842,7 +1293,7 @@ class Hubbard_NEW():
         bool
                                         True if the Hamiltonian is degenerate, else False
         """
-        _H = self.H(5, 1, 0)
+        _H = self.H(5, 1)
 
         if _H.shape[0] == 1:
             return False
