@@ -27,7 +27,7 @@ import inspect
 from enum import IntEnum
 
 
-@jit
+@jit(nopython=True)
 def is_single_hopping_process(x, y, cre, anh) -> bool:
     """
     returns `True` if hopping from state `x` at position `cre` to state `y` at position `anh` is allowed, i.e. if it is a single hopping process which transforms state x into state y.
@@ -50,7 +50,7 @@ def is_single_hopping_process(x, y, cre, anh) -> bool:
     return (x[cre] * y[anh]) == 1 and (x[anh] + y[cre]) == 0
 
 
-@jit
+@jit(nopython=True)
 def hop_sign(state, i) -> float:
     """
     Calculates the sign of creation/annihilation of a particle at site `i`.
