@@ -936,7 +936,7 @@ class DynamicalHubbardPropagator(DynamicalHubbard):
             ImA_local_minus = np.round(self.Greens_Function(
                 lor_minus, u_idx, A_local_minus), 5)[w_negativ_idx]
 
-        A_str = r"$A(\omega, k)$"
+        A_str = r"$\tilde{A}(\omega, k)$"
 
         color = mpl.cm.tab10(np.arange(0, 10))
         mpl.pyplot.rcParams["axes.prop_cycle"] = cycler("color", color)
@@ -948,7 +948,7 @@ class DynamicalHubbardPropagator(DynamicalHubbard):
             gs = fig.add_gridspec(2, 2)
 
         title = fill(
-            r"One-particle spectral function $A(\omega)$ in $k$-space " f"for on-site interaction $U = {_u25}$, $\delta = {_d:.2f}$, $\mu = {_mu:.2f}$, $n = {_n}$ sites with {_s_up} spin up electron(s), {_s_down} spin down electron(s) and hopping amplitude $t = 1$", width=80)
+            r"One-particle spectral function $\tilde{A}(\omega)$ in $k$-space " f"for on-site interaction $U = {_u25}$, $\delta = {_d:.2f}$, $\mu = {_mu:.2f}$, $n = {_n}$ sites with {_s_up} spin up electron(s), {_s_down} spin down electron(s) and hopping amplitude $t = 1$", width=80)
         fig.set_tight_layout(True)
         fig.suptitle(title)
 
