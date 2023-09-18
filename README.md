@@ -15,9 +15,12 @@ supervised by Jan Kunes
 
 # Getting Started
 
-To use the jupyter notebooks provided in this repository one needs `Python` version 3.7 or higher, but less than 3.11 (Due to `Numba`, a JIT compiler Module to speed up code, currently not available for `Python 3.11`) and also has to download certain Modules (like `Numpy`) to run the code. The required Modules are listed in the `requirements.txt` file.
+To use the Jupyter notebooks provided in this repository one needs `Python` version 3.7 or higher, `Python 3.11` is now recommended, and also has to download certain Modules (like `Numpy`) to run the code. The required Modules are listed in the `requirements_<version>.txt` file. There are two different files, for Python version 3.10 and lower, use `requirements_310.txt`, for Python version 3.11, use `requirements_311.txt`. The Modules can be installed via `PIP` (Python Package Installer) by running
 
-After finishing the setup for your OS you can start a jupyter notebook server (see [Ubuntu (Linux)](#ubuntu-linux), [Mac OS](#mac-os) or [Windows](#windows) sections below).
+    $ pip install -r requirements_<version>.txt  --upgrade
+    # e.g. pip install -r requirements_311.txt  --upgrade
+
+After finishing the setup for your OS you can start a Jupyter notebook server (see [Ubuntu (Linux)](#ubuntu-linux), [Mac OS](#mac-os) or [Windows](#windows) sections below).
 
 The relevant notebooks for playing around are located in the `CCMP/` folder and are named `<number>_<topic_name>.ipynb`. The source code for the algorithms is located in the `Modules` folder.
 
@@ -39,7 +42,8 @@ And check again the version. If no newer version is available, google how to ins
 
 To install the required Modules simply run:
 
-    $ pip install -r requirements.txt  --upgrade
+    $ pip install -r requirements_<version>.txt  --upgrade
+    # e.g. pip install -r requirements_311.txt  --upgrade
 
 within the folder containing `requirements.txt`.
 
