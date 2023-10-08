@@ -1012,7 +1012,7 @@ class Hubbard_NEW():
         self.s_up = s_up
         self.s_down = s_down
         self.u_array = u_array
-        self.t_ij = False  # maybe fix later
+        self.t_ij = False  # TODO maybe fix later
 
         self.basis = self.Construct_Basis()
         self.hoppings = self.Allowed_Hoppings_H()
@@ -1430,9 +1430,16 @@ class Hubbard_NEW():
         """
         return np.diag((self.up - self.down)[:, i])
 
-    def Op_SzSz(self, i, j):
+    def Op_SzSz(self, i: int, j: int) -> np.ndarray:
         """
         Calculate the spin-spin-correlation operator in z-direction `SzSz(i, j)` for sites i and j.
+
+        Parameters
+        ----------
+        i: int
+            Site index i
+        j: int
+            Site index j
 
         Returns
         -------
@@ -1585,6 +1592,36 @@ class Hubbard_NEW():
             shifted_eigvals = eig_vals[:, 1:] - eig_val0[:, None]
 
             return 2 * np.sum(np.einsum("ijk, ji->ik", eig_vecs[:, :, 1:], Op @ eig_vec0.T)**2 / shifted_eigvals, axis=1)
+
+    @Cach
+    def Op_Sz_total(self) -> np.ndarray:
+        """
+        Calculate the total spin operator in z-direction `Sz_total`.
+
+        Returns
+        -------
+        Sz_total: ndarray(m, m)
+        """
+        return np.sum(self.Op_Sz(i) for i in np.arange(self.n))
+
+    @Cach
+    def Op_Sz_total2(self) -> np.ndarray:
+        """
+        Calculate the square of the total spin operator in z-direction `Sz_total`.
+
+        Returns
+        -------
+        Sz_total: ndarray(m, m)
+        """
+        return self.Op_Sz_total @ self.Op_Sz_total
+
+    @jit(forceobj=True)
+    def Elements(self, Op: np.ndarray) -> np.ndarray:
+        """
+        Calculate the sandwich x^T.Op.x for all eigenstates x of the Hamiltonian H(u, t) for all u
+        """
+        _, _vecs = self.All_Eigvals_and_Eigvecs
+        return np.einsum("ijk, kji -> ik", _vecs, Op @ _vecs.T)
 
 
 @jit
