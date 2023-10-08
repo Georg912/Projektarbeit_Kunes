@@ -4,12 +4,12 @@ supervised by Jan Kunes
 
 <!-- TOC -->
 
--   [Projektarbeit by Georg FJ Hufnagl](#projektarbeit-by-georg-fj-hufnagl)
--   [Getting Started](#getting-started)
-    -   [Ubuntu and other Linux Distributions](#ubuntu-and-other-linux-distributions)
-    -   [Mac OS](#mac-os)
-    -   [Windows](#windows)
--   [Errors and Bugs](#errors-and-bugs)
+- [Projektarbeit by Georg FJ Hufnagl](#projektarbeit-by-georg-fj-hufnagl)
+- [Getting Started](#getting-started)
+	- [Ubuntu and other Linux Distributions](#ubuntu-and-other-linux-distributions)
+	- [Mac OS](#mac-os)
+	- [Windows](#windows)
+- [Errors and Bugs](#errors-and-bugs)
 
 <!-- /TOC -->
 
