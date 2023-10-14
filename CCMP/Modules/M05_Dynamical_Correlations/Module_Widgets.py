@@ -80,8 +80,8 @@ widgets.dlink((n_Slider, 'value'), (site_j_Slider, 'max'))
 ################################
 mu_Slider = widgets.FloatSlider(
     value=u25_Slider.value/2.,
-    min=0,
-    max=5,
+    min=-5.,
+    max=5.,
     step=0.05,
     description=r'$\mu=$',
     continuous_update=False,

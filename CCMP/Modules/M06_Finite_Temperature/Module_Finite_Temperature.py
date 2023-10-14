@@ -39,6 +39,7 @@ class FiniteTemperature(Hubbard):
             self.u25.min, self.u25.max, num=int(_num_u25) + 1, endpoint=True)
 
         self.bins = bins_Slider
+        # self.t_ij.unobserve(self.on_change_t_ij, names='value')
 
     def on_change_T(self, change):
         """
@@ -346,7 +347,7 @@ class FiniteTemperature(Hubbard):
         plt.grid(which="both", axis="both", linestyle="--",
                  color="black", alpha=0.4)
         plt.tight_layout()
-        plt.plot(T, self.Z[u_idx][T_idx], ".-")
+        plt.plot(T, self.Z[u_idx][T_idx], "-")
 
         return fig
 
@@ -383,10 +384,10 @@ class FiniteTemperature(Hubbard):
 
         color = mpl.cm.tab10(np.arange(0, 10))
 
-        axs[0, 0].plot(T, self.F[u_idx][T_idx], ".-", color=color[0])
-        axs[0, 1].plot(T, self.U[u_idx][T_idx], ".-", color=color[1])
-        axs[1, 0].plot(T, self.S[u_idx][T_idx], ".-", color=color[2])
-        axs[1, 1].plot(T, self.Cv[u_idx][T_idx], ".-", color=color[3])
+        axs[0, 0].plot(T, self.F[u_idx][T_idx], "-", color=color[0])
+        axs[0, 1].plot(T, self.U[u_idx][T_idx], "-", color=color[1])
+        axs[1, 0].plot(T, self.S[u_idx][T_idx], "-", color=color[2])
+        axs[1, 1].plot(T, self.Cv[u_idx][T_idx], "-", color=color[3])
 
         return fig
 
@@ -418,7 +419,7 @@ class FiniteTemperature(Hubbard):
                  color="black", alpha=0.4)
 
         for i in np.arange(1, _n // 2 + 1):
-            plt.plot(T, _SzSz[i], ".-",
+            plt.plot(T, _SzSz[i], "-",
                      label=r"$\langle S_{1z}S_{"f"{i+1}"r"z}\rangle$")
 
         plt.legend(bbox_to_anchor=(1.0, 1), loc="upper left", ncol=1)
@@ -457,9 +458,9 @@ class FiniteTemperature(Hubbard):
         x = np.arange(self.number_of_states)
         for idx, (start, end) in enumerate(zip(self.states_start[:-1], self.states_start[1:])):
             axs[0].plot(x[start:end], self.Elements_Sz_total[u_idx][start:end],
-                        ".-", color=color[idx], label=f"{end - start}")
+                        ".", color=color[idx], label=f"{end - start}")
             axs[1].plot(x[start:end], self.Elements_Sz_total2[u_idx][start:end],
-                        ".-", color=color[idx], label=f"{end - start}")
+                        ".", color=color[idx], label=f"{end - start}")
         axs[0].legend(bbox_to_anchor=(1.0, 1), loc="upper left",
                       ncol=1, title="# of elements")
         axs[1].legend(bbox_to_anchor=(1.0, 1), loc="upper left",
@@ -495,7 +496,7 @@ class FiniteTemperature(Hubbard):
         color = mpl.cm.tab10(np.arange(0, 10))
 
         axs[0].plot(T, np.round(self.ExpVal_Sz_T[u_idx]
-                    [T_idx], 6), ".-", color=color[0])
-        axs[1].plot(T, self.ExpVal_Sz2_T[u_idx][T_idx], ".-", color=color[1])
+                    [T_idx], 6), "-", color=color[0])
+        axs[1].plot(T, self.ExpVal_Sz2_T[u_idx][T_idx], "-", color=color[1])
 
         return fig

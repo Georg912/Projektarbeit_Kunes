@@ -1,4 +1,5 @@
 from ..M04_Hubbard_Model.Module_Hubbard_Class import Hubbard, is_single_hopping_process, hop_sign
+from ..M04_Hubbard_Model.Module_Widgets import t_ij_inputfile_checkbox
 from ..M04_Hubbard_Model.Module_Cache_Decorator import Cach
 from .Module_Widgets import u25_Slider, omega_range_Slider, delta_Slider, site_i_Slider, site_j_Slider, mu_Slider
 import matplotlib.pyplot as plt  	# Plotting
@@ -17,6 +18,7 @@ import inspect  # used to get source code of functions
 import scipy.spatial.distance as sp
 import scipy.linalg as sp_la
 from enum import Enum, auto  # used for enumerations
+from pathlib import Path
 
 
 class Sector(Enum):
@@ -1012,11 +1014,25 @@ class Hubbard_NEW():
         self.s_up = s_up
         self.s_down = s_down
         self.u_array = u_array
-        self.t_ij = False  # TODO maybe fix later
+
+        self.t_ij = t_ij_inputfile_checkbox
+        # self.t_ij.value = False
+        self.t_ij.observe(self.on_change_t_ij, names="value")
 
         self.basis = self.Construct_Basis()
         self.hoppings = self.Allowed_Hoppings_H()
 
+        self.Reset()
+
+    def on_change_t_ij(self, change) -> None:
+        """
+        Method to update cached properties when `t_ij` is changed
+
+        Parameters
+        ----------
+        change: dict
+                dictionary containing information about the change
+        """
         self.Reset()
 
     def Construct_Basis(self):
@@ -1218,7 +1234,7 @@ class Hubbard_NEW():
         NN_hoppings = sp.cdist(_base, _base, metric="cityblock")
         NN_hoppings = np.where(NN_hoppings == 2, 1, 0)
 
-        path = Path(__file__).parent / "t_ij"
+        path = Path(__file__).parent.parent / "M04_Hubbard_Model/t_ij"
         _t_ij = np.loadtxt(path / f"n{_n}.txt", delimiter=",")
 
         NN_sign = np.sum(np.array([_t_ij[i, j] * self.Sign_Matrix(_base, _base, i, j)
@@ -1243,7 +1259,7 @@ class Hubbard_NEW():
         u1: float
             nearest-neighbour-site interaction strength
         """
-        if self.t_ij == True:
+        if self.t_ij.value == True:
             return t * self.Ht_ij + u * self.Hu
         return t * self.Ht + u * self.Hu
 
