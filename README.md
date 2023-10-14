@@ -1,21 +1,21 @@
-# Projektarbeit by Georg FJ Hufnagl
+# Projektarbeit: Concepts in Condensed Matter Physics
 
-supervised by Jan Kunes
+by Georg FJ Hufnagl, supervised by Jan Kunes
 
 <!-- TOC -->
 
-- [Projektarbeit by Georg FJ Hufnagl](#projektarbeit-by-georg-fj-hufnagl)
-- [Getting Started](#getting-started)
-	- [Ubuntu and other Linux Distributions](#ubuntu-and-other-linux-distributions)
-	- [Mac OS](#mac-os)
-	- [Windows](#windows)
-- [Errors and Bugs](#errors-and-bugs)
+-   [Projektarbeit: Concepts in Condensed Matter Physics](#projektarbeit-concepts-in-condensed-matter-physics)
+-   [Getting Started](#getting-started)
+    -   [Ubuntu and other Linux Distributions](#ubuntu-and-other-linux-distributions)
+    -   [Mac OS](#mac-os)
+    -   [Windows](#windows)
+-   [Errors and Bugs](#errors-and-bugs)
 
 <!-- /TOC -->
 
 # Getting Started
 
-To use the Jupyter notebooks provided in this repository one needs `Python` version 3.7 or higher, `Python 3.11` is now recommended, and also has to download certain Modules (like `Numpy`) to run the code. The required Modules are listed in the `requirements_<version>.txt` file. There are two different files, for Python version 3.10 and lower, use `requirements_310.txt`, for Python version 3.11, use `requirements_311.txt`. The Modules can be installed via `PIP` (Python Package Installer) by running
+To use the Jupyter notebooks provided in this repository one needs `Python` version **3.9** (mostly because at this point type checking with the usual e.g. `list` instead of the typing library `List` was enabled) **or higher**; `Python 3.11` is now recommended, and also has to download certain Modules (like `Numpy`) to run the code. The required Modules are listed in the `requirements_<version>.txt` file. There are two different files, for Python version 3.10 and lower, use `requirements_310.txt`, for Python version 3.11, use `requirements_311.txt`. The Modules can be installed via `PIP` (Python Package Installer) by running
 
     $ pip install -r requirements_<version>.txt  --upgrade
     # e.g. pip install -r requirements_311.txt  --upgrade
@@ -26,17 +26,17 @@ The relevant notebooks for playing around are located in the `CCMP/` folder and 
 
 ## Ubuntu (and other Linux Distributions)
 
-Normally, in Ubuntu 20.04 and higher `Python3.8` or newer should be preinstalled. One can check by calling:
+Normally, in Ubuntu 22.04 and higher `Python3.10` or newer should be preinstalled. One can check by calling:
 
     $ python --version
     # or
     $ python3 --version
-    # which might return: Python 3.8
+    # which might return: Python 3.10
 
 If a lower version is installed, call:
 
     $ sudo apt-get update
-    $ sudo apt-get install python3.8 # or higher
+    $ sudo apt-get install python3.10 # or higher
 
 And check again the version. If no newer version is available, google how to install higher versions, which should lead to a `deadsnake PPA` or write me an [e-mail](https://github.com/Georg912/Projektarbeit_Kunes/issues) and I can try to help.
 
