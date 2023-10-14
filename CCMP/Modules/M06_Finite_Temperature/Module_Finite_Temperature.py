@@ -288,21 +288,56 @@ class FiniteTemperature(Hubbard):
 
     @Cach
     def ExpVal_SzSz_T(self):
-        """ TOdo write docstring """
+        """
+        Convenience function to calculate the cached expectation value of the spin-spin correlation operator $S_z S_z$ for all possible sectors of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+        Returns
+        -------
+        list[np.ndarray]
+            A list of the expectation value of the spin-spin correlation operator $S_z S_z$ for all possible sectors of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+        """
         return [self.ExpVal_T(SzSz) for SzSz in self.Elements_SzSz]
 
     @Cach
     def ExpVal_Sz_T(self):
-        """ TOdo write docstring """
+        """
+        Convenience function to calculate the cached expectation value of the spin operator $S_z$ for all possible sectors of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+        Returns
+        -------
+        np.ndarray
+            The expectation value of the spin operator $S_z$ for all possible sectors of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+                """
         return self.ExpVal_T(self.Elements_Sz_total)
 
     @Cach
     def ExpVal_Sz2_T(self):
-        """ TOdo write docstring """
+        """
+        Convenience function to calculate the cached expectation value of the spin operator $S_z^2$ for all possible sectors of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+        Returns
+        -------
+        np.ndarray
+            The expectation value of the spin operator $S_z^2$ for all possible sectors of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+                """
         return self.ExpVal_T(self.Elements_Sz_total2)
 
     def Plot_Energy_Histogram(self, **kwargs) -> plt.figure:
-        """TODO: Docstring for Plot_Energy_Histogram."""
+        """
+        Method to plot the energy histogram of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+        Returns
+        -------
+        plt.figure
+            The figure of the energy histogram.
+
+        Other Parameters
+        ----------------
+        **kwargs : widgets
+            used to pass the widgets to the function.
+        """
         _n = self.n.value
         _N = self.N.value
         _bins = self.bins.value
@@ -328,7 +363,19 @@ class FiniteTemperature(Hubbard):
         return fig
 
     def Plot_Partition_Function_Z(self, **kwargs) -> plt.figure:
-        """TODO: Docstring for Plot_Energy_Histogram."""
+        """
+        Method to plot the partition function of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+        Returns
+        -------
+        plt.figure
+            The figure of the partition function.
+
+        Other Parameters
+        ----------------
+        **kwargs : widgets
+            used to pass the widgets to the function.
+        """
         _n = self.n.value
         _N = self.N.value
         _u25 = self.u25.value
@@ -352,7 +399,19 @@ class FiniteTemperature(Hubbard):
         return fig
 
     def Plot_Thermodynamic_Observables(self, **kwargs) -> plt.figure:
-        """ TODO: Docstring for Plot_Thermodynamic_Observables."""
+        """
+        Method to plot the thermodynamic observables of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`. Plots the free energy, internal energy, entropy and specific heat.
+
+        Returns
+        -------
+        plt.figure
+            The figure of the thermodynamic observables.
+
+        Other Parameters
+        ----------------
+        **kwargs : widgets
+            used to pass the widgets to the function.
+        """
         _n = self.n.value
         _N = self.N.value
         _bins = self.bins.value
@@ -392,7 +451,19 @@ class FiniteTemperature(Hubbard):
         return fig
 
     def Plot_SzSz_T(self, **kwargs) -> plt.figure:
-        """ TODO write docstring """
+        """
+        Method to plot the spin-spin correlation operator $S_z S_z$ of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`. Plots only the relevant spin-spin correlation operators.
+
+        Returns
+        -------
+        plt.figure
+            The figure of the spin-spin correlation operator $S_z S_z$.
+
+        Other Parameters
+        ----------------
+        **kwargs : widgets
+            user to pass the widgets to the function.
+        """
         _n = self.n.value
         _N = self.N.value
         _bins = self.bins.value
@@ -426,6 +497,19 @@ class FiniteTemperature(Hubbard):
         return fig
 
     def Plot_Sz_Sz2_T_Elements(self, **kwatgs) -> plt.figure:
+        """
+        Method to plot the matrix elements of the spin operator $S_z$ and $S_z^2$ of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+        Returns
+        -------
+        plt.figure
+            The figure of the matrix elements of the spin operator $S_z$ and $S_z^2$.
+
+        Other Parameters
+        ----------------
+        **kwargs : widgets
+            user to pass the widgets to the function.
+        """
         _n = self.n.value
         _N = self.N.value
         _u25 = self.u25.value
@@ -469,6 +553,19 @@ class FiniteTemperature(Hubbard):
         return fig
 
     def Plot_Sz_Sz2_T(self, **kwatgs) -> plt.figure:
+        """
+        Method to plot the expectation value of the spin operator $S_z$ and $S_z^2$ of the Hubbard model with `n` sites and `N` particle filling for a given temperature array `T`.
+
+        Returns
+        -------
+        plt.figure
+            The figure of the expectation value of the spin operator $S_z$ and $S_z^2$.
+
+        Other Parameters
+        ----------------
+        **kwargs : widgets
+            user to pass the widgets to the function.
+        """
         _n = self.n.value
         _N = self.N.value
         _u25 = self.u25.value
